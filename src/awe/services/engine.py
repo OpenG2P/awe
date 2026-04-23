@@ -79,7 +79,7 @@ async def start_request(
     session.add(request)
     await session.flush()
 
-    await _emit_event(
+    await emit_event(
         session,
         request,
         "request_created",
@@ -91,7 +91,7 @@ async def start_request(
         # Zero-stage policy → instant approval. Webhook fires immediately.
         request.status = "approved"
         request.completed_at = utcnow()
-        await _emit_event(session, request, "request_approved", {})
+        await emit_event(session, request, "request_approved", {})
         return request
 
     await _advance_to_stage(session, request, stages, target_order=1, actor=requester)
@@ -141,13 +141,13 @@ async def apply_decision(
                 t.completed_at = utcnow()
         request.status = "rejected"
         request.completed_at = utcnow()
-        await _emit_event(
+        await emit_event(
             session,
             request,
             "stage_completed",
             {"stage_order": stage.stage_order, "outcome": "rejected"},
         )
-        await _emit_event(
+        await emit_event(
             session, request, "request_rejected", {"actor": actor}
         )
         return request
@@ -157,7 +157,7 @@ async def apply_decision(
         if t.status in ("open", "claimed"):
             t.status = "skipped"
             t.completed_at = utcnow()
-    await _emit_event(
+    await emit_event(
         session,
         request,
         "stage_completed",
@@ -170,7 +170,7 @@ async def apply_decision(
         # Last stage → request approved.
         request.status = "approved"
         request.completed_at = utcnow()
-        await _emit_event(session, request, "request_approved", {"actor": actor})
+        await emit_event(session, request, "request_approved", {"actor": actor})
         return request
 
     await _advance_to_stage(session, request, stages, next_order, actor=actor)
@@ -199,7 +199,7 @@ async def cancel_request(
     for t in rows.scalars():
         t.status = "skipped"
         t.completed_at = utcnow()
-    await _emit_event(
+    await emit_event(
         session, request, "request_cancelled", {"actor": actor, "reason": reason}
     )
     return request
@@ -225,7 +225,7 @@ async def _advance_to_stage(
             continue
 
         if _should_skip(stage, request.context):
-            await _emit_event(
+            await emit_event(
                 session,
                 request,
                 "stage_skipped",
@@ -238,7 +238,7 @@ async def _advance_to_stage(
 
         if not approvers:
             if stage.on_empty == "skip":
-                await _emit_event(
+                await emit_event(
                     session,
                     request,
                     "stage_skipped",
@@ -249,7 +249,7 @@ async def _advance_to_stage(
             # Block → reject the request.
             request.status = "rejected"
             request.completed_at = utcnow()
-            await _emit_event(
+            await emit_event(
                 session,
                 request,
                 "request_rejected",
@@ -276,7 +276,7 @@ async def _advance_to_stage(
             )
         await session.flush()
 
-        await _emit_event(
+        await emit_event(
             session,
             request,
             "stage_started",
@@ -293,7 +293,7 @@ async def _advance_to_stage(
     # Fell off the end without creating tasks — treat as approved.
     request.status = "approved"
     request.completed_at = utcnow()
-    await _emit_event(
+    await emit_event(
         session, request, "request_approved", {"reason": "all_stages_skipped"}
     )
 
@@ -407,10 +407,15 @@ async def _stage_decision_counts(
 # Event emission + webhook enqueue
 # ---------------------------------------------------------------------------
 _TERMINAL = {"request_approved", "request_rejected", "request_cancelled"}
-_DELIVERABLE = _TERMINAL | {"request_created", "stage_started", "stage_completed"}
+_DELIVERABLE = _TERMINAL | {
+    "request_created",
+    "stage_started",
+    "stage_completed",
+    "task_expired",
+}
 
 
-async def _emit_event(
+async def emit_event(
     session: AsyncSession,
     request: ApprovalRequest,
     event_type: str,
