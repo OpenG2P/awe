@@ -1,0 +1,36 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist/
+build/
+.eggs/
+venv/
+.venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.vscode/
+.idea/
+tests/
+docs/
+helm/
+*.md
+.DS_Store
+Thumbs.db
+.env
+.env.*
+report.html
+
+# UI source — only the pre-built static bundle under
+# src/awe/admin_ui/static/ is shipped in the image. Excluding the UI source
+# tree keeps the Docker build context small and avoids accidentally pulling
+# node_modules into the image.
+ui/

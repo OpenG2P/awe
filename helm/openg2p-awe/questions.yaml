@@ -1,0 +1,115 @@
+questions:
+
+# General
+- variable: global.aweHostname
+  description: Hostname under which the AWE service will be accessed
+  type: string
+  label: AWE Hostname
+  group: General
+
+- variable: global.postgresqlHost
+  description: PostgreSQL server host
+  type: string
+  label: PostgreSQL Server Host
+  group: General
+
+- variable: global.keycloakBaseUrl
+  description: Keycloak base URL (e.g. https://keycloak.example.org)
+  type: string
+  label: Keycloak Base URL
+  group: General
+
+- variable: global.keycloakRealm
+  description: Keycloak realm name
+  type: string
+  label: Keycloak Realm
+  group: General
+
+- variable: postgres-init.enabled
+  description: Run Postgres init job to create database and user
+  type: boolean
+  label: Postgres Init
+  group: General
+
+- variable: awe.enabled
+  description: Install the AWE service
+  type: boolean
+  label: AWE Service
+  group: General
+
+# Webhook
+- variable: awe.appConfig.webhook.timeoutSeconds
+  description: Per-attempt deadline for the caller's callback handler
+  type: int
+  label: Webhook Timeout (s)
+  group: Webhook
+
+- variable: awe.appConfig.webhook.maxAttempts
+  description: Total number of webhook attempts before marking exhausted
+  type: int
+  label: Max Webhook Attempts
+  group: Webhook
+
+# SLA
+- variable: awe.appConfig.sla.checkIntervalSeconds
+  description: How often the SLA monitor scans for expired stages
+  type: int
+  label: SLA Check Interval (s)
+  group: SLA
+
+# Notifier
+- variable: awe.appConfig.notifier.enabled
+  description: Send approver notification emails over SMTP
+  type: boolean
+  label: Enable Email Notifications
+  group: Notifier
+
+- variable: awe.appConfig.notifier.smtpHost
+  description: SMTP server hostname
+  type: string
+  label: SMTP Host
+  group: Notifier
+
+- variable: awe.appConfig.notifier.fromAddress
+  description: From address used when sending notifications
+  type: string
+  label: From Address
+  group: Notifier
+
+# Image
+- variable: awe.image.repository
+  description: Docker image repository for AWE
+  type: string
+  label: Image Repository
+  group: Image
+
+- variable: awe.image.tag
+  description: Docker image tag
+  type: string
+  label: Image Tag
+  group: Image
+
+# Scaling
+- variable: awe.replicaCount
+  description: Number of replicas (ignored if HPA is enabled)
+  type: int
+  label: Replica Count
+  group: Scaling
+
+- variable: awe.autoscaling.enabled
+  description: Enable Horizontal Pod Autoscaler
+  type: boolean
+  label: Enable HPA
+  group: Scaling
+
+- variable: awe.autoscaling.minReplicas
+  description: Minimum replicas under HPA
+  type: int
+  label: HPA Min Replicas
+  group: Scaling
+
+- variable: awe.autoscaling.maxReplicas
+  description: Maximum replicas under HPA
+  type: int
+  label: HPA Max Replicas
+  group: Scaling

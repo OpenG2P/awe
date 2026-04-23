@@ -1,0 +1,49 @@
+awe:
+  # Service metadata
+  service_id: openg2p.awe
+  api_version: "1.0"
+  # Logical caller module this AWE deployment serves (registry, pbms, ...).
+  module: default
+
+  # Outbound webhook delivery
+  webhook:
+    timeout_seconds: 10
+    max_attempts: 6
+    # 1m → 5m → 15m → 1h → 6h → 24h cumulative window
+    backoff_seconds: [60, 300, 900, 3600, 21600]
+    poll_interval_seconds: 2
+    batch_size: 20
+
+  # Approver resolver (HTTP escape hatch tunables)
+  resolver:
+    http_timeout_seconds: 5
+
+  # SLA monitor — expires open tasks past their due_at.
+  sla:
+    check_interval_seconds: 300
+
+  # Keycloak OIDC integration. Leave issuer empty for dev mode (no signature
+  # verification on inbound bearers — never use in production).
+  keycloak:
+    base_url: ""
+    realm: openg2p
+    admin_client_id: awe-admin-resolver
+    admin_client_secret: ""
+    issuer: ""
+    jwks_url: ""
+    audience: ""
+
+  # Approver email notifications (best-effort, optional).
+  notifier:
+    enabled: false
+    smtp_host: ""
+    smtp_port: 587
+    smtp_user: ""
+    smtp_password: ""
+    from_address: no-reply@openg2p.org
+    use_tls: true
+
+  # Bundled admin SPA mount point.
+  admin_ui:
+    enabled: true
+    mount_path: /v1/awe/admin

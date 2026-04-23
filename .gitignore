@@ -1,0 +1,71 @@
+docs/.gitkeep
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# Coverage reports
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test reports
+tests/report.html
+tests/assets/
+
+# Environment files
+.env
+.env.*
+
+# Helm package outputs (CI/local `helm package` lands .tgz at repo root)
+/*.tgz
+
+# ---------------------------------------------------------------------------
+# Admin UI (Vite + React + TypeScript)
+# ---------------------------------------------------------------------------
+# Node deps + build outputs
+ui/node_modules/
+ui/dist/
+ui/.vite/
+ui/tsconfig.tsbuildinfo
+
+# npm/yarn/pnpm debug logs
+ui/npm-debug.log*
+ui/yarn-debug.log*
+ui/yarn-error.log*
+ui/pnpm-debug.log*
+
+# Vite local env overlays (beyond the generic `.env.*` above, scoped to ui/)
+ui/*.local
+
+# Built SPA bundle — produced by `npm run build` into the Python package so
+# Docker picks it up. Never commit the compiled assets; build in CI instead.
+src/awe/admin_ui/static/

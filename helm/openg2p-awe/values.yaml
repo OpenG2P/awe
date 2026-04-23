@@ -1,0 +1,197 @@
+global:
+  aweHostname: 'awe.trial.openg2p.org'
+
+  # Database (provisioned by the postgres-init subchart)
+  postgresqlHost: commons-postgresql
+  aweDB: '{{ printf "%s" .Release.Name | replace "-" "_" }}'
+  aweDBPort: 5432
+  aweDBUser: '{{ printf "%s_user" .Release.Name | replace "-" "_" }}'
+  aweDBSecret: '{{ .Release.Name }}'
+  aweDBUserPasswordKey: '{{ .Release.Name }}-db-user'
+
+  # Keycloak (left empty so dev installs work without OIDC; set in env-specific values)
+  keycloakBaseUrl: ''
+  keycloakRealm: 'openg2p'
+
+postgres-init:
+  enabled: true
+  postgresql:
+    host: '{{ .Values.global.postgresqlHost }}'
+    port: 5432
+    existingSecret: commons-postgresql
+    existingSecretPostgresPasswordKey: postgres-password
+  databases:
+    - name: '{{ tpl .Values.global.aweDB $ }}'
+      user: '{{ tpl .Values.global.aweDBUser $ }}'
+      secret: '{{ tpl .Values.global.aweDBSecret $ }}'
+      secretUserPasswordKey: '{{ tpl .Values.global.aweDBUserPasswordKey $ }}'
+
+awe:
+  enabled: true
+  nameOverride: awe
+  hostname: '{{ tpl .Values.global.aweHostname $ }}'
+
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  updateStrategy:
+    type: RollingUpdate
+  serviceAccount:
+    create: false
+    name: ""
+  image:
+    repository: openg2p/openg2p-awe
+    tag: "develop"
+    pullPolicy: Always
+  podSecurityContext:
+    enabled: false
+    fsGroup: 1000
+  containerSecurityContext:
+    enabled: false
+    runAsUser: 1000
+    runAsNonRoot: true
+
+  # -- Resource requests/limits. Tune to expected request volume.
+  # resources:
+  #   requests:
+  #     cpu: 100m
+  #     memory: 256Mi
+  #   limits:
+  #     cpu: 500m
+  #     memory: 512Mi
+
+  service:
+    type: ClusterIP
+    port: 80
+    externalTrafficPolicy: Cluster
+
+  istio:
+    enabled: true
+    virtualservice:
+      enabled: true
+      host: '{{ tpl .Values.awe.hostname $ }}'
+      gateway: "internal"
+      destination: ""
+      destinationPort: '{{ .Values.awe.service.port }}'
+      prefix: /v1/awe/
+      rewriteUri: ""
+    gateway:
+      enabled: false
+      host: '{{ tpl .Values.awe.hostname $ }}'
+      ingressController:
+        istio: ingressgateway
+      httpTlsRedirect: false
+      httpEnabled: true
+      httpsEnabled: false
+      tls:
+        mode: SIMPLE
+        credentialName: ""
+
+  # ---------------------------------------------------------------------------
+  # Application config — rendered as a ConfigMap and mounted at
+  # /app/config/config.yaml. Mirrors src/awe/config.py shape.
+  # ---------------------------------------------------------------------------
+  appConfig:
+    serviceId: openg2p.awe
+    apiVersion: "1.0"
+    # Logical caller module this AWE deployment serves.
+    module: default
+
+    webhook:
+      timeoutSeconds: 10
+      maxAttempts: 6
+      backoffSeconds: [60, 300, 900, 3600, 21600]
+      pollIntervalSeconds: 2
+      batchSize: 20
+
+    resolver:
+      httpTimeoutSeconds: 5
+
+    sla:
+      checkIntervalSeconds: 300
+
+    keycloak:
+      baseUrl: '{{ .Values.global.keycloakBaseUrl }}'
+      realm: '{{ .Values.global.keycloakRealm }}'
+      adminClientId: awe-admin-resolver
+      issuer: ''
+      jwksUrl: ''
+      audience: ''
+
+    notifier:
+      enabled: false
+      smtpHost: ''
+      smtpPort: 587
+      fromAddress: no-reply@openg2p.org
+      useTls: true
+
+    adminUi:
+      enabled: true
+      mountPath: /v1/awe/admin
+
+  # ---------------------------------------------------------------------------
+  # Environment variables
+  # ---------------------------------------------------------------------------
+  envVars:
+    DB_HOST: '{{ .Values.global.postgresqlHost }}'
+    DB_PORT: '{{ .Values.global.aweDBPort }}'
+    DB_NAME: '{{ tpl .Values.global.aweDB $ }}'
+    DB_USER: '{{ tpl .Values.global.aweDBUser $ }}'
+    CONFIG_PATH: /app/config/config.yaml
+
+  envVarsFrom:
+    DB_PASSWORD:
+      secretKeyRef:
+        name: '{{ tpl .Values.global.aweDBSecret $ }}'
+        key: '{{ tpl .Values.global.aweDBUserPasswordKey $ }}'
+
+  startupProbe:
+    enabled: true
+    httpGet:
+      path: /v1/awe/health
+      port: http
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+    successThreshold: 1
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /v1/awe/health
+      port: http
+    initialDelaySeconds: 20
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /v1/awe/health
+      port: http
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+
+  postgresCheckerInit:
+    enabled: true
+    image:
+      repository: jbergknoff/postgresql-client
+      tag: latest
+      pullPolicy: IfNotPresent
+    command:
+    - 'sh'
+    args:
+    - '-c'
+    - 'until psql "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}" -c "SELECT 1" > /dev/null 2>&1; do echo "Waiting for database ${DB_NAME} to be ready..."; sleep 3; done'
+    containerSecurityContext:
+      enabled: false
+
+  containerPort: 8000

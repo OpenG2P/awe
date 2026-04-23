@@ -1,0 +1,29 @@
+awe:
+  service_id: openg2p.awe.test
+  api_version: "1.0"
+  module: test
+
+  webhook:
+    timeout_seconds: 1
+    max_attempts: 2
+    backoff_seconds: [1]
+    poll_interval_seconds: 1
+    batch_size: 5
+
+  resolver:
+    http_timeout_seconds: 2
+
+  sla:
+    check_interval_seconds: 60
+
+  keycloak:
+    base_url: ""
+    realm: openg2p
+    issuer: ""
+
+  notifier:
+    enabled: false
+
+  admin_ui:
+    enabled: false
+    mount_path: /v1/awe/admin

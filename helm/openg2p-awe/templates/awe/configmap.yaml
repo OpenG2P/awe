@@ -1,0 +1,49 @@
+{{- if .Values.awe.enabled }}
+{{- $values := .Values.awe -}}
+{{- $context := dict "Values" (merge (deepCopy $values) (dict "global" .Values.global)) "Chart" .Chart "Release" .Release "Files" .Files "Capabilities" .Capabilities -}}
+{{- with $context -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" . }}-config
+  labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+data:
+  config.yaml: |
+    awe:
+      service_id: {{ .Values.appConfig.serviceId | quote }}
+      api_version: {{ .Values.appConfig.apiVersion | quote }}
+      module: {{ .Values.appConfig.module | quote }}
+
+      webhook:
+        timeout_seconds: {{ .Values.appConfig.webhook.timeoutSeconds }}
+        max_attempts: {{ .Values.appConfig.webhook.maxAttempts }}
+        backoff_seconds: {{ .Values.appConfig.webhook.backoffSeconds | toJson }}
+        poll_interval_seconds: {{ .Values.appConfig.webhook.pollIntervalSeconds }}
+        batch_size: {{ .Values.appConfig.webhook.batchSize }}
+
+      resolver:
+        http_timeout_seconds: {{ .Values.appConfig.resolver.httpTimeoutSeconds }}
+
+      sla:
+        check_interval_seconds: {{ .Values.appConfig.sla.checkIntervalSeconds }}
+
+      keycloak:
+        base_url: {{ tpl .Values.appConfig.keycloak.baseUrl $ | quote }}
+        realm: {{ tpl .Values.appConfig.keycloak.realm $ | quote }}
+        admin_client_id: {{ .Values.appConfig.keycloak.adminClientId | quote }}
+        issuer: {{ .Values.appConfig.keycloak.issuer | quote }}
+        jwks_url: {{ .Values.appConfig.keycloak.jwksUrl | quote }}
+        audience: {{ .Values.appConfig.keycloak.audience | quote }}
+
+      notifier:
+        enabled: {{ .Values.appConfig.notifier.enabled }}
+        smtp_host: {{ .Values.appConfig.notifier.smtpHost | quote }}
+        smtp_port: {{ .Values.appConfig.notifier.smtpPort }}
+        from_address: {{ .Values.appConfig.notifier.fromAddress | quote }}
+        use_tls: {{ .Values.appConfig.notifier.useTls }}
+
+      admin_ui:
+        enabled: {{ .Values.appConfig.adminUi.enabled }}
+        mount_path: {{ .Values.appConfig.adminUi.mountPath | quote }}
+{{- end -}}
+{{- end }}
