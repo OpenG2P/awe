@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
@@ -32,6 +32,7 @@ from .controllers import (
 )
 from .db import dispose_engine, init_engine
 from .models import create_schema
+from .schemas.callback import WebhookEvent
 from .workers.sla_monitor import sla_monitor_loop
 from .workers.webhook_dispatcher import webhook_dispatcher_loop
 
@@ -107,6 +108,40 @@ app.include_router(health_router)
 app.include_router(policy_router)
 app.include_router(request_router)
 app.include_router(task_router)
+
+
+# ---------------------------------------------------------------------------
+# Outbound webhook contract (OpenAPI 3.1 `webhooks` section)
+# ---------------------------------------------------------------------------
+# These declarations are NEVER invoked by AWE — they exist purely to surface
+# the outbound contract in the generated OpenAPI spec, so callers can read
+# the body schema + signed headers from the same artifact they read the rest
+# of the API from. Implementation lives in awe.services.webhook +
+# awe.workers.webhook_dispatcher.
+@app.webhooks.post(
+    "approval-event",
+    summary="Approval workflow state change",
+    description=(
+        "Sent by AWE to the caller's `callback_url` whenever a status-changing "
+        "event occurs on an approval request — `request_created`, "
+        "`stage_started`, `stage_completed`, `request_approved`, "
+        "`request_rejected`, `request_cancelled`, or `task_expired`.\n\n"
+        "**Signature scheme**: `X-Approval-Signature` is "
+        "`sha256=` + HMAC-SHA256 over `<X-Approval-Timestamp>.<raw body>` "
+        "using the per-caller shared secret. The caller must verify the "
+        "signature, dedup on `X-Approval-Event-Id`, and return any 2xx "
+        "within the configured timeout (default 10s). Non-2xx triggers "
+        "retries on the schedule documented in functional-specifications "
+        "(1m → 5m → 15m → 1h → 6h, ~27h total)."
+    ),
+)
+def approval_callback(  # pragma: no cover — declaration only
+    body: WebhookEvent,
+    x_approval_event_id: str = Header(..., alias="X-Approval-Event-Id"),
+    x_approval_timestamp: str = Header(..., alias="X-Approval-Timestamp"),
+    x_approval_signature: str = Header(..., alias="X-Approval-Signature"),
+):
+    """The caller's handler returns 2xx to ACK; non-2xx triggers retries."""
 
 # Mount the bundled admin SPA if present (built from `ui/` into
 # `src/awe/admin_ui/static/`). Absent in dev — that's fine; the API still works.

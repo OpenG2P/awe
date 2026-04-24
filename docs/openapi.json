@@ -999,6 +999,74 @@
       }
     }
   },
+  "webhooks": {
+    "approval-event": {
+      "post": {
+        "summary": "Approval workflow state change",
+        "description": "Sent by AWE to the caller's `callback_url` whenever a status-changing event occurs on an approval request \u2014 `request_created`, `stage_started`, `stage_completed`, `request_approved`, `request_rejected`, `request_cancelled`, or `task_expired`.\n\n**Signature scheme**: `X-Approval-Signature` is `sha256=` + HMAC-SHA256 over `<X-Approval-Timestamp>.<raw body>` using the per-caller shared secret. The caller must verify the signature, dedup on `X-Approval-Event-Id`, and return any 2xx within the configured timeout (default 10s). Non-2xx triggers retries on the schedule documented in functional-specifications (1m \u2192 5m \u2192 15m \u2192 1h \u2192 6h, ~27h total).",
+        "operationId": "approval_callbackapproval_event_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Approval-Event-Id"
+            },
+            "name": "X-Approval-Event-Id",
+            "in": "header"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Approval-Timestamp"
+            },
+            "name": "X-Approval-Timestamp",
+            "in": "header"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Approval-Signature"
+            },
+            "name": "X-Approval-Signature",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "components": {
     "schemas": {
       "ApproverRuleIn": {
@@ -2171,6 +2239,80 @@
           "response"
         ],
         "title": "VersionResponse"
+      },
+      "WebhookEvent": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id",
+            "examples": [
+              "7f3e..."
+            ]
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type",
+            "description": "request_created | stage_started | stage_completed | request_approved | request_rejected | request_cancelled",
+            "examples": [
+              "request_approved"
+            ]
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type"
+          },
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "stage_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage Order"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "event_type",
+          "request_id",
+          "artifact_type",
+          "artifact_id",
+          "status",
+          "occurred_at"
+        ],
+        "title": "WebhookEvent",
+        "description": "The body POSTed to the caller's `callback_url`.\n\nHeaders (set by the dispatcher, not part of this body):\n  X-Approval-Event-Id   \u2014 same as `event_id` below\n  X-Approval-Signature  \u2014 `sha256=<hex>`, HMAC over the raw body\n  X-Approval-Timestamp  \u2014 Unix seconds, included in the signed payload"
       }
     },
     "securitySchemes": {
