@@ -80,26 +80,8 @@ input:disabled {
   gap: 6px;
 }
 
-.icon-btn {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  padding: 4px 10px;
-  font-size: 13px;
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
-}
-.icon-btn:hover:not(:disabled) {
-  background: var(--color-white);
-}
-.icon-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.icon-btn.danger {
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-}
+/* .icon-btn / .icon-btn.danger live in theme.css so they're available
+   on every page without needing this stylesheet loaded first. */
 
 .rules-list {
   margin-top: 8px;

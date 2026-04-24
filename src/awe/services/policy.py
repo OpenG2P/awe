@@ -147,6 +147,28 @@ async def activate_version(
     return target
 
 
+async def deactivate_version(
+    session: AsyncSession, policy_key: str, version: int
+) -> ApprovalPolicy:
+    """Flip an active version to `archived` without activating a replacement.
+
+    After this, `policy_key` has no active version — `POST /requests` for
+    that key fails with AWE-001 until a different version is activated.
+    In-flight requests are unaffected; they reference this version by id
+    and continue resolving stages against its rules.
+    """
+    target = await _get_version(session, policy_key, version)
+    if target is None:
+        raise PolicyNotFound(f"Policy {policy_key} v{version} not found")
+    if target.status != "active":
+        raise PolicyError(
+            f"v{version} is '{target.status}', not 'active' — nothing to deactivate"
+        )
+    target.status = "archived"
+    await session.flush()
+    return target
+
+
 async def get_active(
     session: AsyncSession, policy_key: str
 ) -> Optional[ApprovalPolicy]:

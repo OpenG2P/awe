@@ -159,6 +159,30 @@ async def activate(
 
 
 @router.post(
+    "/{policy_key}/versions/{version}/deactivate",
+    response_model=PolicyOut,
+    summary=(
+        "Archive an active version without activating a replacement. "
+        "New POST /requests for this policy_key will fail with AWE-001 "
+        "until another version is activated; in-flight requests continue."
+    ),
+)
+async def deactivate(
+    policy_key: str,
+    version: int,
+    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    session=Depends(get_db),
+):
+    try:
+        policy = await policy_svc.deactivate_version(session, policy_key, version)
+    except policy_svc.PolicyNotFound as e:
+        return error(404, "AWE-001", str(e))
+    except policy_svc.PolicyError as e:
+        return error(409, "AWE-007", str(e))
+    return policy_to_out(policy)
+
+
+@router.post(
     "/{policy_key}/versions/{version}/simulate",
     response_model=SimulateResponse,
     summary="Resolve approvers for a sample context — no DB writes",

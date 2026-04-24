@@ -81,6 +81,11 @@ export const api = {
       `/policies/${encodeURIComponent(key)}/versions/${v}/activate`,
       { method: "POST" }
     ),
+  deactivate: (key: string, v: number) =>
+    request<Policy>(
+      `/policies/${encodeURIComponent(key)}/versions/${v}/deactivate`,
+      { method: "POST" }
+    ),
   simulate: (key: string, v: number, context: Record<string, unknown>) =>
     request<SimulateResponse>(
       `/policies/${encodeURIComponent(key)}/versions/${v}/simulate`,

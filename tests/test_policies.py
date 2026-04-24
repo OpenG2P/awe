@@ -129,6 +129,47 @@ async def test_edit_draft_in_place(client, admin_token) -> None:
 
 
 @pytest.mark.asyncio
+async def test_deactivate_flips_active_to_archived(
+    client, admin_token, service_token
+) -> None:
+    h = auth_header(admin_token)
+    payload = _sample_policy()
+    payload["policy_key"] = "registry.cr.deact"
+    await client.post("/v1/awe/policies", json=payload, headers=h)
+    await client.post(
+        "/v1/awe/policies/registry.cr.deact/versions/1/activate", headers=h
+    )
+
+    # Deactivate → archived
+    resp = await client.post(
+        "/v1/awe/policies/registry.cr.deact/versions/1/deactivate", headers=h
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "archived"
+
+    # Deactivating twice returns 409 (not active any more)
+    resp = await client.post(
+        "/v1/awe/policies/registry.cr.deact/versions/1/deactivate", headers=h
+    )
+    assert resp.status_code == 409
+    assert resp.json()["errors"][0]["errorCode"] == "AWE-007"
+
+    # New POST /requests now fails — no active version for this key
+    resp = await client.post(
+        "/v1/awe/requests",
+        json={
+            "policy_key": "registry.cr.deact",
+            "artifact_type": "x",
+            "artifact_id": "y",
+            "context": {},
+        },
+        headers=auth_header(service_token),
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errors"][0]["errorCode"] == "AWE-001"
+
+
+@pytest.mark.asyncio
 async def test_edit_active_version_rejected(client, admin_token) -> None:
     h = auth_header(admin_token)
     payload = _sample_policy()

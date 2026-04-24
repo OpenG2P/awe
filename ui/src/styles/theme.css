@@ -138,3 +138,36 @@ button {
   background: var(--color-light-grey);
   color: var(--color-black);
 }
+
+/* Compact button used in table rows / inline actions (Activate, Retry,
+   Deactivate, stage reorder). Smaller than .btn-primary/.btn-secondary. */
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  padding: 4px 10px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--color-light-grey);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.icon-btn.danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.icon-btn.danger:hover:not(:disabled) {
+  background: rgba(192, 57, 43, 0.08);
+}

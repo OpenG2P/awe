@@ -428,6 +428,62 @@
         }
       }
     },
+    "/v1/awe/policies/{policy_key}/versions/{version}/deactivate": {
+      "post": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Archive an active version without activating a replacement. New POST /requests for this policy_key will fail with AWE-001 until another version is activated; in-flight requests continue.",
+        "operationId": "deactivate_v1_awe_policies__policy_key__versions__version__deactivate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "policy_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Policy Key"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/awe/policies/{policy_key}/versions/{version}/simulate": {
       "post": {
         "tags": [

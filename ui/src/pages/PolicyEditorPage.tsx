@@ -19,6 +19,23 @@ export default function PolicyEditorPage() {
     },
   });
 
+  const deactivate = useMutation({
+    mutationFn: (version: number) => api.deactivate(policyKey, version),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["policy-versions", policyKey] });
+      qc.invalidateQueries({ queryKey: ["policies"] });
+    },
+  });
+
+  function confirmAndDeactivate(version: number) {
+    const ok = window.confirm(
+      `Deactivate ${policyKey} v${version}?\n\n` +
+        "Until another version is activated, POST /requests for this " +
+        "policy_key will fail. In-flight requests are unaffected."
+    );
+    if (ok) deactivate.mutate(version);
+  }
+
   return (
     <>
       <div
@@ -99,6 +116,19 @@ export default function PolicyEditorPage() {
                           </button>
                         </>
                       )}
+                      {v.status === "active" && (
+                        <button
+                          className="icon-btn danger"
+                          onClick={() => confirmAndDeactivate(v.version)}
+                          disabled={deactivate.isPending}
+                          title="Archive this version without activating a replacement"
+                        >
+                          {deactivate.isPending &&
+                          deactivate.variables === v.version
+                            ? "Deactivating…"
+                            : "Deactivate"}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -109,6 +139,11 @@ export default function PolicyEditorPage() {
         {activate.error && (
           <p style={{ color: "var(--color-danger)", marginTop: 12 }}>
             Activate failed: {String(activate.error)}
+          </p>
+        )}
+        {deactivate.error && (
+          <p style={{ color: "var(--color-danger)", marginTop: 12 }}>
+            Deactivate failed: {String(deactivate.error)}
           </p>
         )}
       </div>
