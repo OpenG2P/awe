@@ -1,11 +1,11 @@
-"""Schemas for admin/ops endpoints (webhook deliveries, etc.)."""
+"""Schemas for admin/ops endpoints (webhook deliveries, audit log, etc.)."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DeliveryOut(BaseModel):
@@ -22,3 +22,21 @@ class DeliveryOut(BaseModel):
     last_error: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+
+class AuditActionOut(BaseModel):
+    # `metadata` clashes with BaseModel's own `metadata`; source attribute is
+    # `metadata_` on the ORM model, exposed as `metadata` in the response.
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    occurred_at: datetime
+    actor: str
+    actor_email: Optional[str] = None
+    action: str
+    resource_type: str
+    resource_id: str
+    summary: Optional[str] = None
+    before: Optional[Dict[str, Any]] = None
+    after: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = Field(default=None, alias="metadata_")

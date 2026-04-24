@@ -12,6 +12,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from .audit import AuditAction
 from .base import Base
 from .policy import ApprovalPolicy, ApprovalStage, ApproverRule
 from .request import ApprovalDecision, ApprovalEvent, ApprovalRequest, ApprovalTask
@@ -32,6 +33,7 @@ __all__ = [
     "WebhookDelivery",
     "CallbackSecret",
     "IdempotencyKey",
+    "AuditAction",
     "create_schema",
 ]
 

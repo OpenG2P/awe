@@ -1,9 +1,10 @@
 """
 Policy CRUD + simulate.
 
-Admin-only — gated on the Keycloak realm role `awe-admin`. The simulate
-endpoint runs the resolver against a sample context so admins can preview
-which approvers a given input would resolve to.
+Mutating endpoints (POST/PUT/PATCH) require `AWE_ADMIN`; reads (GET +
+simulate) accept `AWE_VIEWER` or `AWE_ADMIN`. The simulate endpoint runs
+the resolver against a sample context so admins can preview which approvers
+a given input would resolve to.
 """
 
 from __future__ import annotations
@@ -20,10 +21,28 @@ from ..schemas.policy import (
     SimulateResponse,
     SimulateStageOut,
 )
+from ..services import audit as audit_svc
 from ..services import policy as policy_svc
 from ..services import resolver as resolver_svc
-from ..services.auth import CallerIdentity, require_role
+from ..services.auth import (
+    ROLE_ADMIN,
+    ROLE_VIEWER,
+    CallerIdentity,
+    require_role,
+    require_role_any,
+)
 from ._helpers import error, policy_to_out, policy_version_to_out
+
+
+def _policy_snapshot(policy) -> dict:
+    """Compact JSON snapshot of a policy row for audit `before`/`after` fields."""
+    out = policy_to_out(policy)
+    # Pydantic → dict, stripping datetimes' tz info for consistent JSON.
+    return out.model_dump(mode="json")
+
+
+def _resource_id(policy_key: str, version: int) -> str:
+    return f"{policy_key}:v{version}"
 
 router = APIRouter(prefix="/v1/awe/policies", tags=["policies"])
 
@@ -36,13 +55,22 @@ router = APIRouter(prefix="/v1/awe/policies", tags=["policies"])
 )
 async def create_policy(
     payload: PolicyCreate,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role("AWE_ADMIN")),
     session=Depends(get_db),
 ):
     try:
         policy = await policy_svc.create_draft(session, payload, actor=identity.subject)
     except policy_svc.PolicyError as e:
         return error(409, "AWE-002", str(e))
+    await audit_svc.record(
+        session,
+        identity=identity,
+        action="policy.create",
+        resource_type="policy",
+        resource_id=_resource_id(policy.policy_key, policy.version),
+        summary=f"Created draft {policy.policy_key} v{policy.version}",
+        after=_policy_snapshot(policy),
+    )
     return policy_to_out(policy)
 
 
@@ -52,7 +80,7 @@ async def create_policy(
     summary="List policies (newest version of each policy_key)",
 )
 async def list_policies(
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
     session=Depends(get_db),
 ):
     policies = await policy_svc.list_policies(session)
@@ -66,7 +94,7 @@ async def list_policies(
 )
 async def list_versions(
     policy_key: str,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
     session=Depends(get_db),
 ):
     versions = await policy_svc.list_versions(session, policy_key)
@@ -83,7 +111,7 @@ async def list_versions(
 async def get_version(
     policy_key: str,
     version: int,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
     session=Depends(get_db),
 ):
     policy = await policy_svc.get_version(session, policy_key, version)
@@ -101,7 +129,7 @@ async def get_version(
 async def add_version(
     policy_key: str,
     payload: PolicyCreate,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role("AWE_ADMIN")),
     session=Depends(get_db),
 ):
     if payload.policy_key != policy_key:
@@ -112,6 +140,15 @@ async def add_version(
         )
     except policy_svc.PolicyNotFound as e:
         return error(404, "AWE-001", str(e))
+    await audit_svc.record(
+        session,
+        identity=identity,
+        action="policy.add_version",
+        resource_type="policy",
+        resource_id=_resource_id(policy.policy_key, policy.version),
+        summary=f"Added draft {policy.policy_key} v{policy.version}",
+        after=_policy_snapshot(policy),
+    )
     return policy_to_out(policy)
 
 
@@ -124,11 +161,13 @@ async def edit_draft(
     policy_key: str,
     version: int,
     payload: PolicyCreate,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role("AWE_ADMIN")),
     session=Depends(get_db),
 ):
     if payload.policy_key != policy_key:
         return error(400, "AWE-010", "policy_key in body must match URL")
+    existing = await policy_svc.get_version(session, policy_key, version)
+    before = _policy_snapshot(existing) if existing is not None else None
     try:
         policy = await policy_svc.update_draft(
             session, policy_key, version, payload, actor=identity.subject
@@ -137,6 +176,16 @@ async def edit_draft(
         return error(404, "AWE-001", str(e))
     except policy_svc.PolicyError as e:
         return error(409, "AWE-007", str(e))
+    await audit_svc.record(
+        session,
+        identity=identity,
+        action="policy.update",
+        resource_type="policy",
+        resource_id=_resource_id(policy.policy_key, policy.version),
+        summary=f"Edited draft {policy.policy_key} v{policy.version}",
+        before=before,
+        after=_policy_snapshot(policy),
+    )
     return policy_to_out(policy)
 
 
@@ -148,13 +197,28 @@ async def edit_draft(
 async def activate(
     policy_key: str,
     version: int,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role("AWE_ADMIN")),
     session=Depends(get_db),
 ):
+    prior = await policy_svc.get_active(session, policy_key)
+    before = {"status": prior.status, "version": prior.version} if prior else None
     try:
         policy = await policy_svc.activate_version(session, policy_key, version)
     except policy_svc.PolicyNotFound as e:
         return error(404, "AWE-001", str(e))
+    await audit_svc.record(
+        session,
+        identity=identity,
+        action="policy.activate",
+        resource_type="policy",
+        resource_id=_resource_id(policy_key, version),
+        summary=(
+            f"Activated {policy_key} v{version}"
+            + (f" (archived prior v{prior.version})" if prior and prior.id != policy.id else "")
+        ),
+        before=before,
+        after={"status": policy.status, "version": policy.version},
+    )
     return policy_to_out(policy)
 
 
@@ -170,7 +234,7 @@ async def activate(
 async def deactivate(
     policy_key: str,
     version: int,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role("AWE_ADMIN")),
     session=Depends(get_db),
 ):
     try:
@@ -179,6 +243,16 @@ async def deactivate(
         return error(404, "AWE-001", str(e))
     except policy_svc.PolicyError as e:
         return error(409, "AWE-007", str(e))
+    await audit_svc.record(
+        session,
+        identity=identity,
+        action="policy.deactivate",
+        resource_type="policy",
+        resource_id=_resource_id(policy_key, version),
+        summary=f"Deactivated {policy_key} v{version}",
+        before={"status": "active"},
+        after={"status": "archived"},
+    )
     return policy_to_out(policy)
 
 
@@ -191,7 +265,7 @@ async def simulate(
     policy_key: str,
     version: int,
     payload: SimulateRequest,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
     session=Depends(get_db),
 ):
     policy = await policy_svc.get_version(session, policy_key, version)

@@ -1,8 +1,9 @@
 """
 Approval requests — service-to-service runtime endpoints.
 
-Auth: any valid Keycloak token. Cancel additionally requires `awe-admin`
-since destructive ops on shared state warrant a higher bar than create/read.
+Auth: any valid Keycloak token (Caller services use client_credentials
+service tokens that don't carry user roles). Cancel additionally requires
+`AWE_ADMIN` since destructive ops on shared state warrant a higher bar.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from ..schemas.request import (
     EventOut,
     RequestOut,
 )
+from ..services import audit as audit_svc
 from ..services import engine as engine_svc
 from ..services import policy as policy_svc
 from ..services.auth import CallerIdentity, current_identity, require_role
@@ -161,18 +163,33 @@ async def search_requests(
 async def cancel_request(
     request_id: str,
     payload: CancelRequest,
-    identity: CallerIdentity = Depends(require_role("awe-admin")),
+    identity: CallerIdentity = Depends(require_role("AWE_ADMIN")),
     session: AsyncSession = Depends(get_db),
 ):
     request = await session.get(ApprovalRequest, request_id)
     if request is None:
         return error(404, "AWE-003", f"Request {request_id} not found")
+    before_status = request.status
     try:
         await engine_svc.cancel_request(
             session, request, actor=identity.subject, reason=payload.reason
         )
     except engine_svc.EngineError as e:
         return error(409, "AWE-007", str(e))
+    await audit_svc.record(
+        session,
+        identity=identity,
+        action="request.cancel",
+        resource_type="request",
+        resource_id=request.id,
+        summary=(
+            f"Cancelled {request.artifact_type}/{request.artifact_id}"
+            + (f" ({payload.reason})" if payload.reason else "")
+        ),
+        before={"status": before_status},
+        after={"status": "cancelled"},
+        metadata={"reason": payload.reason, "artifact_id": request.artifact_id},
+    )
     return request_to_out(request)
 
 

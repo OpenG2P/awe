@@ -1,15 +1,13 @@
 name: Publish Helm Charts
 
 on:
-  # Disabled while the code stabilizes — re-enable the `push:` trigger below
-  # once the chart is ready to publish to openg2p-helm/gh-pages.
-  # push:
-  #   branches:
-  #     - "**"
-  #   tags:
-  #     - '**'
-  #   paths:
-  #     - 'helm/**'
+  push:
+    branches:
+      - "**"
+    tags:
+      - '**'
+    paths:
+      - 'helm/**'
   workflow_dispatch:
 
 jobs:

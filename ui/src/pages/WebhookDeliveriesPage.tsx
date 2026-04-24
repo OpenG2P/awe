@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type DeliveryOut } from "../api/client";
+import { getCurrentUser } from "../auth";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All" },
@@ -13,6 +14,7 @@ const STATUS_OPTIONS = [
 export default function WebhookDeliveriesPage() {
   const [status, setStatus] = useState("failed");
   const qc = useQueryClient();
+  const user = getCurrentUser();
   const { data, isLoading, error } = useQuery({
     queryKey: ["deliveries", status],
     queryFn: () => api.listDeliveries({ status: status || undefined }),
@@ -78,6 +80,7 @@ export default function WebhookDeliveriesPage() {
                 <DeliveryRow
                   key={d.id}
                   d={d}
+                  canRetry={user.isAdmin}
                   onRetry={() => retry.mutate(d.id)}
                   pending={retry.isPending && retry.variables === d.id}
                 />
@@ -97,10 +100,12 @@ export default function WebhookDeliveriesPage() {
 
 function DeliveryRow({
   d,
+  canRetry,
   onRetry,
   pending,
 }: {
   d: DeliveryOut;
+  canRetry: boolean;
   onRetry: () => void;
   pending: boolean;
 }) {
@@ -151,7 +156,7 @@ function DeliveryRow({
           : new Date(d.next_attempt_at).toLocaleString()}
       </td>
       <td>
-        {d.status !== "delivered" && (
+        {canRetry && d.status !== "delivered" && (
           <button
             className="icon-btn"
             onClick={onRetry}

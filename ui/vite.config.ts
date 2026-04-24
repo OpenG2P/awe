@@ -1,30 +1,25 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// The bundled SPA is served by the FastAPI app under /v1/awe/admin/.
-// The Helm chart's Istio VirtualService routes /v1/awe/* to this service so
-// the SPA's assets resolve correctly behind Istio without rewrite rules.
+// SPA is shipped as an independent image (openg2p-awe-ui) served by nginx
+// at the host root. Istio routes `/v1/awe/*` to the backend Service and
+// everything else to this UI Service — so the app runs at `/` and API
+// calls use the same origin.
 export default defineConfig({
   plugins: [react()],
-  base: "/v1/awe/admin/",
+  base: "/",
   build: {
-    outDir: "../src/awe/admin_ui/static",
+    outDir: "dist",
     emptyOutDir: true,
   },
   server: {
     port: 5173,
     proxy: {
-      // Proxy API calls to the FastAPI backend, but let Vite serve the SPA
-      // itself at /v1/awe/admin/* — otherwise the page load gets forwarded
-      // upstream and returns the API's 404.
+      // Dev only: forward API calls to a local uvicorn. In production,
+      // Istio does this at the host level and nginx never proxies.
       "/v1/awe": {
         target: "http://localhost:8000",
         changeOrigin: true,
-        bypass: (req) => {
-          if (req.url?.startsWith("/v1/awe/admin")) {
-            return req.url;
-          }
-        },
       },
     },
   },

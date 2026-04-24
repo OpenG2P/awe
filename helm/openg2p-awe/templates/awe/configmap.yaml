@@ -41,9 +41,5 @@ data:
         smtp_port: {{ .Values.appConfig.notifier.smtpPort }}
         from_address: {{ .Values.appConfig.notifier.fromAddress | quote }}
         use_tls: {{ .Values.appConfig.notifier.useTls }}
-
-      admin_ui:
-        enabled: {{ .Values.appConfig.adminUi.enabled }}
-        mount_path: {{ .Values.appConfig.adminUi.mountPath | quote }}
 {{- end -}}
 {{- end }}

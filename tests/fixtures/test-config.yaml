@@ -23,7 +23,3 @@ awe:
 
   notifier:
     enabled: false
-
-  admin_ui:
-    enabled: false
-    mount_path: /v1/awe/admin

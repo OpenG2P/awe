@@ -1,6 +1,13 @@
-// Thin wrapper around the AWE HTTP API. In production the SPA is served
-// from the same origin as the API (under /v1/awe/admin), so relative URLs
-// work without CORS. In dev, Vite's proxy forwards /v1/awe → :8000.
+// Thin wrapper around the AWE HTTP API. The SPA and API share an origin
+// (Istio routes `/v1/awe/*` to the backend Service, `/` to the UI Service),
+// so relative URLs work without CORS. In dev, Vite's proxy forwards
+// `/v1/awe` → :8000.
+//
+// Auth tokens come from the Keycloak-js client in ../auth.ts — either a real
+// Keycloak session token in production, or a dev fallback JWT when the
+// runtime config has an empty Keycloak URL.
+
+import { getToken } from "../auth";
 
 const BASE = "/v1/awe";
 
@@ -8,34 +15,6 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
   }
-}
-
-// ---------------------------------------------------------------------------
-// Bearer token
-// ---------------------------------------------------------------------------
-// Policy/admin endpoints require a Keycloak bearer with the `awe-admin` role.
-// Strategy:
-//   1. If `localStorage.awe_token` is set, use it (wire a real login flow
-//      into this later — plug in @react-keycloak/web or similar).
-//   2. Otherwise fall back to a built-in dev token. The backend accepts
-//      unsigned tokens when `keycloak.issuer` is empty (dev mode). This
-//      makes `npm run dev` work end-to-end without any manual setup.
-// The dev token is `sub=dev-admin`, realm role `awe-admin`, no signature.
-// Never reachable in production — the Helm chart sets a non-empty issuer
-// which forces JWKS verification.
-const DEV_TOKEN =
-  "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
-  btoa(
-    JSON.stringify({
-      sub: "dev-admin",
-      email: "dev-admin@local",
-      realm_access: { roles: ["awe-admin"] },
-    })
-  ).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_") +
-  ".";
-
-export function getToken(): string {
-  return localStorage.getItem("awe_token") || DEV_TOKEN;
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -113,6 +92,21 @@ export const api = {
       `/admin/deliveries/${encodeURIComponent(id)}/retry`,
       { method: "POST" }
     ),
+  listAudit: (
+    params: {
+      actor?: string;
+      action?: string;
+      resource_type?: string;
+      resource_id?: string;
+      since?: string;
+      until?: string;
+      limit?: number;
+    } = {}
+  ) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => v && qs.append(k, String(v)));
+    return request<AuditActionOut[]>(`/admin/audit?${qs}`);
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -256,4 +250,18 @@ export interface DeliveryOut {
   last_error?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AuditActionOut {
+  id: string;
+  occurred_at: string;
+  actor: string;
+  actor_email?: string | null;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  summary?: string | null;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 }

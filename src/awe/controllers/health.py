@@ -92,6 +92,5 @@ async def config_view():
                 "timeout_seconds": cfg.webhook.timeout_seconds,
             },
             "sla": cfg.sla.model_dump(),
-            "admin_ui": cfg.admin_ui.model_dump(),
         }
     )

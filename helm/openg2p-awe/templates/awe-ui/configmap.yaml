@@ -1,0 +1,23 @@
+{{- if .Values.ui.enabled }}
+{{- $values := .Values.ui -}}
+{{- $context := dict "Values" (merge (deepCopy $values) (dict "global" .Values.global)) "Chart" .Chart "Release" .Release "Files" .Files "Capabilities" .Capabilities -}}
+{{- with $context -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" . }}-config
+  labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+data:
+  # Runtime config read by the SPA at boot (ui/src/auth.ts → loadConfig).
+  # Mounted into nginx at /usr/share/nginx/html/config.json so the SPA
+  # fetches it same-origin without needing a rebuild per-environment.
+  config.json: |
+    {
+      "keycloak": {
+        "url":      {{ tpl .Values.global.keycloakBaseUrl $ | quote }},
+        "realm":    {{ tpl .Values.global.keycloakRealm $ | quote }},
+        "clientId": {{ tpl .Values.global.aweAdminPortalClientId $ | quote }}
+      }
+    }
+{{- end -}}
+{{- end }}

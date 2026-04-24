@@ -3,7 +3,7 @@ Approver task endpoints — invoked by the Caller Svc on behalf of end users.
 
 The bearer token's `sub` claim is treated as the assignee id. Approvers can
 only act on tasks assigned to them; the policy editor can override that via a
-`awe-admin` role token (intentional escape hatch for ops).
+`AWE_ADMIN` role token (intentional escape hatch for ops).
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ async def claim_task(
     task = await session.get(ApprovalTask, task_id)
     if task is None:
         return error(404, "AWE-004", f"Task {task_id} not found")
-    if task.assignee != identity.subject and "awe-admin" not in identity.roles:
+    if task.assignee != identity.subject and "AWE_ADMIN" not in identity.roles:
         return error(403, "AWE-008", "Task is not assigned to you")
     if task.status != "open":
         return error(409, "AWE-007", f"Task is in '{task.status}' state — cannot claim")
@@ -96,7 +96,7 @@ async def decide(
     task = await session.get(ApprovalTask, task_id)
     if task is None:
         return error(404, "AWE-004", f"Task {task_id} not found")
-    if task.assignee != identity.subject and "awe-admin" not in identity.roles:
+    if task.assignee != identity.subject and "AWE_ADMIN" not in identity.roles:
         return error(403, "AWE-008", "Task is not assigned to you")
     if task.status not in ("open", "claimed"):
         return error(409, "AWE-007", f"Task is in '{task.status}' state — cannot decide")

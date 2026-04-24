@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { getCurrentUser } from "../auth";
 
 // Fixed width so all action buttons (Simulate / Activate / Deactivate)
 // line up in the actions column even though their labels differ in length.
@@ -10,6 +11,7 @@ const actionBtnStyle: React.CSSProperties = { minWidth: 80 };
 export default function PolicyEditorPage() {
   const { policyKey = "" } = useParams();
   const qc = useQueryClient();
+  const user = getCurrentUser();
 
   const { data: versions, isLoading } = useQuery({
     queryKey: ["policy-versions", policyKey],
@@ -54,12 +56,14 @@ export default function PolicyEditorPage() {
           <h1>{policyKey}</h1>
           <Link to="/policies">← Back to policies</Link>
         </div>
-        <Link
-          to={`/policies/${encodeURIComponent(policyKey)}/versions/new`}
-          className="btn-primary"
-        >
-          + New draft version
-        </Link>
+        {user.isAdmin && (
+          <Link
+            to={`/policies/${encodeURIComponent(policyKey)}/versions/new`}
+            className="btn-primary"
+          >
+            + New draft version
+          </Link>
+        )}
       </div>
 
       <div className="card" style={{ marginTop: 24 }}>
@@ -102,7 +106,7 @@ export default function PolicyEditorPage() {
                       >
                         Simulate
                       </Link>
-                      {v.status === "draft" && (
+                      {v.status === "draft" && user.isAdmin && (
                         <>
                           <Link
                             to={`/policies/${encodeURIComponent(
@@ -124,7 +128,7 @@ export default function PolicyEditorPage() {
                           </button>
                         </>
                       )}
-                      {v.status === "active" && (
+                      {v.status === "active" && user.isAdmin && (
                         <button
                           className="icon-btn danger"
                           onClick={() => confirmAndDeactivate(v.version)}

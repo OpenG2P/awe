@@ -127,3 +127,56 @@ th {
   background: rgba(192, 57, 43, 0.12);
   color: var(--color-danger);
 }
+
+/* --- Sidebar footer: user info + logout --- */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  color: var(--color-white);
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-roles {
+  color: var(--color-yellow);
+  font-size: 11px;
+  font-family: monospace;
+  letter-spacing: 0.3px;
+}
+
+.dev-badge {
+  color: var(--color-orange);
+  font-weight: 600;
+}
+
+.logout-btn {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-white);
+}

@@ -44,7 +44,3 @@ awe:
     from_address: no-reply@openg2p.org
     use_tls: true
 
-  # Bundled admin SPA mount point.
-  admin_ui:
-    enabled: true
-    mount_path: /v1/awe/admin

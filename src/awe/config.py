@@ -70,12 +70,6 @@ class NotifierConfig(BaseModel):
     use_tls: bool = True
 
 
-class AdminUiConfig(BaseModel):
-    # Mount the bundled admin SPA at this path. Empty disables.
-    enabled: bool = True
-    mount_path: str = "/v1/awe/admin"
-
-
 class AweConfig(BaseModel):
     # Service metadata
     service_id: str = "openg2p.awe"
@@ -89,7 +83,6 @@ class AweConfig(BaseModel):
     sla: SlaConfig = SlaConfig()
     keycloak: KeycloakConfig = KeycloakConfig()
     notifier: NotifierConfig = NotifierConfig()
-    admin_ui: AdminUiConfig = AdminUiConfig()
 
 
 class Settings(BaseSettings):

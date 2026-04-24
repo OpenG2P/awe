@@ -138,7 +138,7 @@ async def current_identity(
 
 
 def require_role(role: str):
-    """Dependency factory — gate an endpoint on a Keycloak realm role."""
+    """Dependency factory — gate an endpoint on a single Keycloak role."""
 
     async def _checker(
         identity: CallerIdentity = Depends(current_identity),
@@ -151,3 +151,30 @@ def require_role(role: str):
         return identity
 
     return _checker
+
+
+def require_role_any(*roles: str):
+    """Dependency factory — gate an endpoint on ANY of the listed roles.
+
+    Useful for read endpoints that should accept AWE_VIEWER or AWE_ADMIN,
+    since admins implicitly have viewer privileges.
+    """
+
+    role_set = set(roles)
+
+    async def _checker(
+        identity: CallerIdentity = Depends(current_identity),
+    ) -> CallerIdentity:
+        if not role_set.intersection(identity.roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"One of {sorted(role_set)} required",
+            )
+        return identity
+
+    return _checker
+
+
+# Canonical role names used across the codebase.
+ROLE_ADMIN = "AWE_ADMIN"
+ROLE_VIEWER = "AWE_VIEWER"

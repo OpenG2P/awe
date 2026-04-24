@@ -1,0 +1,8 @@
+{
+  "_comment": "Runtime config for the AWE admin SPA. nginx serves this file from the UI container; the Helm chart overwrites it with a ConfigMap mount in production. Leave keycloak.url empty for dev mode (unsigned JWT fallback).",
+  "keycloak": {
+    "url": "",
+    "realm": "staff",
+    "clientId": "awe-admin-portal"
+  }
+}

@@ -1,4 +1,4 @@
-name: Build Docker Images
+name: Build Docker Image (UI)
 
 on:
   push:
@@ -7,12 +7,8 @@ on:
     tags-ignore:
       - '**'
     paths:
-      - 'src/**'
-      - 'config/**'
-      - 'Dockerfile'
-      - 'pyproject.toml'
-      - 'requirements-test.txt'
-      - '.github/workflows/docker-build.yml'
+      - 'ui/**'
+      - '.github/workflows/docker-build-ui.yml'
   workflow_dispatch:
 
 env:
@@ -20,11 +16,11 @@ env:
   REGISTRY: docker.io
 
 jobs:
-  build-awe:
-    name: Build AWE Docker Image
+  build-awe-ui:
+    name: Build AWE UI Docker Image
     runs-on: ubuntu-latest
     env:
-      SERVICE_NAME: openg2p-awe
+      SERVICE_NAME: openg2p-awe-ui
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,32 +41,11 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "IMAGE_ID=${{ env.NAMESPACE }}/${{ env.SERVICE_NAME }}" >> $GITHUB_ENV
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Generate OpenAPI spec
-        run: |
-          pip install -e .
-          mkdir -p docs
-          python scripts/generate_openapi.py > docs/openapi.json
-
-      - name: Commit OpenAPI spec if changed
-        run: |
-          git config user.name "openg2pbot"
-          git config user.email "bot@openg2p.org"
-          if ! git diff --quiet docs/openapi.json; then
-            git add docs/openapi.json
-            git commit -m "chore: auto-generate OpenAPI spec [skip ci]"
-            git push
-          fi
-
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: Dockerfile
+          context: ./ui
+          file: ./ui/Dockerfile
           push: false
           tags: ${{ env.IMAGE_ID }}:${{ env.VERSION }}
           build-args: |
@@ -90,8 +65,8 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: Dockerfile
+          context: ./ui
+          file: ./ui/Dockerfile
           push: true
           tags: ${{ env.IMAGE_ID }}:${{ env.VERSION }}
           build-args: |

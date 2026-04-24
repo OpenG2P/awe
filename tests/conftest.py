@@ -41,18 +41,36 @@ async def client():
 
 @pytest_asyncio.fixture
 async def admin_token() -> str:
-    """A bearer token with the `awe-admin` realm role.
+    """A bearer token with the `AWE_ADMIN` role.
 
     Dev-mode auth (issuer empty) accepts any unsigned JWT; the test fixture
-    crafts one with the role we need.
+    crafts one with the role we need. Role is exposed via `realm_access`
+    here for simplicity; production tokens carry it under
+    `resource_access.awe-admin-portal.roles` (the auth code accepts both).
     """
     from jose import jwt
 
     return jwt.encode(
         {
             "sub": "test-admin",
-            "realm_access": {"roles": ["awe-admin"]},
+            "realm_access": {"roles": ["AWE_ADMIN"]},
             "email": "admin@test",
+        },
+        "secret",
+        algorithm="HS256",
+    )
+
+
+@pytest_asyncio.fixture
+async def viewer_token() -> str:
+    """A bearer token with the `AWE_VIEWER` role only — no write access."""
+    from jose import jwt
+
+    return jwt.encode(
+        {
+            "sub": "test-viewer",
+            "realm_access": {"roles": ["AWE_VIEWER"]},
+            "email": "viewer@test",
         },
         "secret",
         algorithm="HS256",

@@ -17,13 +17,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, Header
-from fastapi.staticfiles import StaticFiles
 
-from .config import get_settings
 from .controllers import (
     admin_router,
     health_router,
@@ -133,7 +130,8 @@ openapi_tags = [
         "name": "admin",
         "description": (
             "Operational endpoints — inspect webhook deliveries, manually "
-            "retry failed/exhausted ones. Admin-only (`awe-admin` role)."
+            "retry failed/exhausted ones. Admin-only (`AWE_ADMIN` role; "
+            "list endpoints also accept `AWE_VIEWER`)."
         ),
     },
     {
@@ -201,14 +199,3 @@ def approval_callback(  # pragma: no cover — declaration only
     x_approval_signature: str = Header(..., alias="X-Approval-Signature"),
 ):
     """The caller's handler returns 2xx to ACK; non-2xx triggers retries."""
-
-# Mount the bundled admin SPA if present (built from `ui/` into
-# `src/awe/admin_ui/static/`). Absent in dev — that's fine; the API still works.
-_admin_cfg = get_settings().awe.admin_ui
-_static_dir = Path(__file__).parent / "admin_ui" / "static"
-if _admin_cfg.enabled and _static_dir.is_dir():
-    app.mount(
-        _admin_cfg.mount_path,
-        StaticFiles(directory=_static_dir, html=True),
-        name="admin-ui",
-    )

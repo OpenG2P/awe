@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { getCurrentUser } from "../auth";
 
 export default function PoliciesPage() {
   const navigate = useNavigate();
+  const user = getCurrentUser();
   const { data, isLoading, error } = useQuery({
     queryKey: ["policies"],
     queryFn: api.listPolicies,
@@ -25,9 +27,14 @@ export default function PoliciesPage() {
             a draft archives the previously active version.
           </p>
         </div>
-        <button className="btn-primary" onClick={() => navigate("/policies/new")}>
-          + New policy
-        </button>
+        {user.isAdmin && (
+          <button
+            className="btn-primary"
+            onClick={() => navigate("/policies/new")}
+          >
+            + New policy
+          </button>
+        )}
       </div>
       <div className="card">
         {isLoading && <p>Loading…</p>}

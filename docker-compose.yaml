@@ -34,5 +34,22 @@ services:
         condition: service_healthy
     restart: on-failure
 
+  # Static SPA served by nginx. In production this is routed by Istio at
+  # the host level; locally we expose it on :8080 and the UI's fetch calls
+  # hit the backend on the same machine via the browser's origin (see nginx
+  # proxy_pass for the /v1/awe prefix below, which is a local-dev nicety —
+  # production nginx never proxies; Istio does host-level routing).
+  awe-ui:
+    build:
+      context: ./ui
+      args:
+        GIT_COMMIT: local
+        BUILD_TIME: local
+    ports:
+      - "8080:8080"
+    depends_on:
+      - awe
+    restart: on-failure
+
 volumes:
   pgdata:

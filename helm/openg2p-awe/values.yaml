@@ -82,16 +82,20 @@ keycloak-init:
           description: OIDC client used by AWE's bundled admin SPA for policy authors.
           redirectUris: ["*"]
           clientRoles:
-            - "awe-admin"
+            # AWE_ADMIN — full read + write (policies, cancellations, retries).
+            - "AWE_ADMIN"
+            # AWE_VIEWER — read-only access to policies, requests, deliveries, audit log.
+            - "AWE_VIEWER"
         - clientId: awe-admin-resolver
           name: AWE Admin Resolver (service account)
           description: S2S client used by AWE to resolve Keycloak role/group members.
       users:
         # Assumes `admin` is already provisioned by the commons layer.
+        # Gets AWE_ADMIN so first-install operators can log into the admin SPA.
         - username: admin
           clientRoleMappings:
             awe-admin-portal:
-              - "awe-admin"
+              - "AWE_ADMIN"
         # Service-account user auto-created by Keycloak when the client
         # above has `serviceAccountsEnabled: true`. We grant it the built-in
         # `realm-management` roles needed to look up role / group members.
@@ -144,16 +148,11 @@ awe:
     port: 80
     externalTrafficPolicy: Cluster
 
+  # Per-pod Istio bits (optional gateway). Host-level routing lives in the
+  # chart-level `istio.virtualservice` block below, which creates a single
+  # VirtualService with two routes: `/v1/awe/` → backend, `/` → UI.
   istio:
     enabled: true
-    virtualservice:
-      enabled: true
-      host: '{{ tpl .Values.awe.hostname $ }}'
-      gateway: "internal"
-      destination: ""
-      destinationPort: '{{ .Values.awe.service.port }}'
-      prefix: /v1/awe/
-      rewriteUri: ""
     gateway:
       enabled: false
       host: '{{ tpl .Values.awe.hostname $ }}'
@@ -205,10 +204,6 @@ awe:
       smtpPort: 587
       fromAddress: no-reply@openg2p.org
       useTls: true
-
-    adminUi:
-      enabled: true
-      mountPath: /v1/awe/admin
 
   # ---------------------------------------------------------------------------
   # Environment variables
@@ -277,3 +272,93 @@ awe:
       enabled: false
 
   containerPort: 8000
+
+# ---------------------------------------------------------------------------
+# UI (openg2p-awe-ui) — static SPA served by nginx. Low-traffic admin surface,
+# so a single replica with minimal resources is the default. Routing to this
+# Service lives in the chart-level `istio.virtualservice` block at the bottom.
+# ---------------------------------------------------------------------------
+ui:
+  enabled: true
+  nameOverride: awe-ui
+  hostname: '{{ tpl .Values.global.aweHostname $ }}'
+
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  updateStrategy:
+    type: RollingUpdate
+  serviceAccount:
+    create: false
+    name: ""
+  image:
+    repository: openg2p/openg2p-awe-ui
+    tag: "develop"
+    pullPolicy: Always
+  podSecurityContext:
+    enabled: false
+    fsGroup: 101          # nginx-unprivileged user
+  containerSecurityContext:
+    enabled: false
+    runAsUser: 101
+    runAsNonRoot: true
+
+  # Minimal — a tiny nginx serving static JS/CSS/HTML doesn't need more.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+  service:
+    type: ClusterIP
+    port: 80
+    externalTrafficPolicy: Cluster
+
+  startupProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 0
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 10
+    successThreshold: 1
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+
+  containerPort: 8080
+
+# ---------------------------------------------------------------------------
+# Istio routing — ONE VirtualService, TWO routes.
+#   `/v1/awe/` → backend Service (longer prefix wins; Istio evaluates in order)
+#   `/`        → UI Service (catch-all for everything else under the host)
+# Single VS keeps the host's routing deterministic without relying on Istio's
+# cross-VS merge behaviour.
+# ---------------------------------------------------------------------------
+istio:
+  virtualservice:
+    enabled: true
+    host: '{{ tpl .Values.global.aweHostname $ }}'
+    gateway: "internal"
