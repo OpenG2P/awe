@@ -93,8 +93,25 @@ async def _verify_token(token: str) -> dict:
                 detail="Invalid bearer token",
             ) from e
 
+    # Fetch the JWKS (with our in-memory cache). Network / TLS / DNS
+    # failures here used to bubble up as bare 500s — catch them explicitly
+    # so operators see the reason in the response + logs.
     try:
         jwks = await _fetch_jwks(cfg.jwks_url)
+    except httpx.HTTPError as e:
+        logger.exception("JWKS fetch failed: %s", cfg.jwks_url)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Could not reach Keycloak JWKS at {cfg.jwks_url}: {e}",
+        ) from e
+    except Exception as e:  # noqa: BLE001
+        logger.exception("JWKS load failed unexpectedly")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"JWKS load failed: {e}",
+        ) from e
+
+    try:
         return jwt.decode(
             token,
             jwks,
@@ -107,6 +124,12 @@ async def _verify_token(token: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid bearer token: {e}",
+        ) from e
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Unexpected token-decode failure")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token verification failed: {e}",
         ) from e
 
 

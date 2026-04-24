@@ -27,13 +27,18 @@ data:
       sla:
         check_interval_seconds: {{ .Values.appConfig.sla.checkIntervalSeconds }}
 
+      # Every value below is itself a template expression that references
+      # global.*; we pipe through `tpl` so nested template markers inside
+      # the string get evaluated. Without that, the literal template text
+      # lands in the ConfigMap and the backend blows up at first auth call
+      # with httpcore.UnsupportedProtocol (missing http:// scheme).
       keycloak:
         base_url: {{ tpl .Values.appConfig.keycloak.baseUrl $ | quote }}
         realm: {{ tpl .Values.appConfig.keycloak.realm $ | quote }}
-        admin_client_id: {{ .Values.appConfig.keycloak.adminClientId | quote }}
-        issuer: {{ .Values.appConfig.keycloak.issuer | quote }}
-        jwks_url: {{ .Values.appConfig.keycloak.jwksUrl | quote }}
-        audience: {{ .Values.appConfig.keycloak.audience | quote }}
+        admin_client_id: {{ tpl .Values.appConfig.keycloak.adminClientId $ | quote }}
+        issuer: {{ tpl .Values.appConfig.keycloak.issuer $ | quote }}
+        jwks_url: {{ tpl .Values.appConfig.keycloak.jwksUrl $ | quote }}
+        audience: {{ tpl .Values.appConfig.keycloak.audience $ | quote }}
 
       notifier:
         enabled: {{ .Values.appConfig.notifier.enabled }}

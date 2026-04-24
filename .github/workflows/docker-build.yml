@@ -1,4 +1,4 @@
-name: Build AWE Backend Docker Image
+name: Build & Push Backend Docker 
 
 on:
   push:

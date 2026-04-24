@@ -80,7 +80,14 @@ keycloak-init:
         - clientId: awe-admin-portal
           name: AWE Admin Portal
           description: OIDC client used by AWE's bundled admin SPA for policy authors.
+          # SPA ⇒ public client with PKCE + Web Origins for the browser-side
+          # token exchange. The two extra fields below are IGNORED by
+          # keycloak-init v1.1.0 (it hardcodes publicClient=false and skips
+          # webOrigins) — until upstream accepts them, operators flip these
+          # manually in the Keycloak admin UI post-install. See deployment.md.
+          publicClient: true
           redirectUris: ["*"]
+          webOrigins: ["+"]
           clientRoles:
             # AWE_ADMIN — full read + write (policies, cancellations, retries).
             - "AWE_ADMIN"
