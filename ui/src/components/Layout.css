@@ -16,25 +16,28 @@
   padding: 0 24px 28px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;   /* logo + title both flush-left at padding edge */
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 20px;
 }
 
 .brand-logo {
-  width: 220px;
+  width: 167px;              /* 95% of prior 176px */
   height: auto;
   display: block;
+  margin: 0;                 /* no inherited offsets */
+  padding: 0;
 }
 
 .brand-title {
   font-family: var(--font-heading);
-  font-size: 18px;
+  font-size: 20px;           /* +10% from 18px */
   font-weight: 500;
   color: var(--color-white);
-  margin-top: 16px;
-  line-height: 1.25;
-  letter-spacing: 0.2px;
+  margin: 24px 0 0 0;        /* +10px from 14px */
+  padding: 0;
+  line-height: 1.2;
+  letter-spacing: 0;
 }
 
 .nav-item {

@@ -2,6 +2,11 @@ import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 
+// Fixed width so all action buttons (Simulate / Activate / Deactivate)
+// line up in the actions column even though their labels differ in length.
+// Sized to fit "Deactivate" snugly at rest; pending labels may wrap briefly.
+const actionBtnStyle: React.CSSProperties = { minWidth: 80 };
+
 export default function PolicyEditorPage() {
   const { policyKey = "" } = useParams();
   const qc = useQueryClient();
@@ -92,6 +97,8 @@ export default function PolicyEditorPage() {
                         to={`/policies/${encodeURIComponent(
                           policyKey
                         )}/versions/${v.version}/simulate`}
+                        className="icon-btn orange"
+                        style={actionBtnStyle}
                       >
                         Simulate
                       </Link>
@@ -108,6 +115,7 @@ export default function PolicyEditorPage() {
                             className="icon-btn"
                             onClick={() => activate.mutate(v.version)}
                             disabled={activate.isPending}
+                            style={actionBtnStyle}
                           >
                             {activate.isPending &&
                             activate.variables === v.version
@@ -122,6 +130,7 @@ export default function PolicyEditorPage() {
                           onClick={() => confirmAndDeactivate(v.version)}
                           disabled={deactivate.isPending}
                           title="Archive this version without activating a replacement"
+                          style={actionBtnStyle}
                         >
                           {deactivate.isPending &&
                           deactivate.variables === v.version

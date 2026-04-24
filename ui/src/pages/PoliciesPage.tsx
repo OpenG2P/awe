@@ -58,7 +58,10 @@ export default function PoliciesPage() {
                     </span>
                   </td>
                   <td>
-                    <Link to={`/policies/${encodeURIComponent(p.policy_key)}`}>
+                    <Link
+                      to={`/policies/${encodeURIComponent(p.policy_key)}`}
+                      className="icon-btn success"
+                    >
                       Open
                     </Link>
                   </td>

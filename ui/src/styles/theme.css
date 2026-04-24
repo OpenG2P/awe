@@ -139,9 +139,11 @@ button {
   color: var(--color-black);
 }
 
-/* Compact button used in table rows / inline actions (Activate, Retry,
-   Deactivate, stage reorder). Smaller than .btn-primary/.btn-secondary. */
+/* Compact button used in table rows / inline actions (Open, Activate,
+   Retry, Deactivate, stage reorder). Smaller than .btn-primary/.btn-secondary.
+   Works on both <button> and <a class="icon-btn"> (react-router Link). */
 .icon-btn {
+  display: inline-block;
   background: transparent;
   border: 1px solid var(--color-border);
   padding: 4px 10px;
@@ -150,12 +152,16 @@ button {
   font-weight: 500;
   border-radius: var(--radius-sm);
   color: var(--color-text);
+  text-align: center;
+  text-decoration: none;
+  line-height: 1.3;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .icon-btn:hover:not(:disabled) {
   background: var(--color-light-grey);
+  color: var(--color-text);
 }
 
 .icon-btn:disabled {
@@ -170,4 +176,25 @@ button {
 
 .icon-btn.danger:hover:not(:disabled) {
   background: rgba(192, 57, 43, 0.08);
+  color: var(--color-danger);
+}
+
+.icon-btn.success {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.icon-btn.success:hover:not(:disabled) {
+  background: rgba(39, 174, 96, 0.08);
+  color: var(--color-success);
+}
+
+.icon-btn.orange {
+  border-color: var(--color-orange);
+  color: var(--color-orange);
+}
+
+.icon-btn.orange:hover:not(:disabled) {
+  background: rgba(240, 123, 26, 0.08);
+  color: var(--color-orange);
 }
