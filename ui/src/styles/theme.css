@@ -101,6 +101,23 @@ button {
   transition: background-color 0.15s ease;
 }
 
+/* Button-styled anchors (react-router Link with className="btn-primary"/.btn-secondary).
+   Keeps styling consistent whether the trigger is a <button> or an <a>. */
+.btn-primary,
+.btn-secondary {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1.2;
+  border: none;
+  transition: background-color 0.15s ease;
+}
+
 .btn-primary {
   background: var(--color-yellow);
   color: var(--color-black);
@@ -108,10 +125,16 @@ button {
 
 .btn-primary:hover {
   background: var(--color-accent-hover);
+  color: var(--color-black);
 }
 
 .btn-secondary {
   background: transparent;
   color: var(--color-black);
   border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background: var(--color-light-grey);
+  color: var(--color-black);
 }

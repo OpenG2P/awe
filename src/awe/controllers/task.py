@@ -28,22 +28,30 @@ router = APIRouter(prefix="/v1/awe/tasks", tags=["tasks"])
 @router.get(
     "",
     response_model=list[TaskOut],
-    summary="List the caller's open tasks (assignee=me by default)",
+    summary="List tasks — by assignee (default = me) and/or by request_id",
 )
 async def list_tasks(
-    assignee: str = Query(default="me"),
-    status_filter: Optional[str] = Query(default="open", alias="status"),
+    assignee: Optional[str] = Query(
+        default="me",
+        description=(
+            "Filter by assignee. Default `me` resolves to the token's `sub`. "
+            "Pass `*` (or any non-`me` value) plus `request_id` to enumerate "
+            "all tasks for a given request — used by the admin Request Detail page."
+        ),
+    ),
+    request_id: Optional[str] = Query(default=None),
+    status_filter: Optional[str] = Query(default=None, alias="status"),
     limit: int = Query(default=100, ge=1, le=500),
     identity: CallerIdentity = Depends(current_identity),
     session: AsyncSession = Depends(get_db),
 ):
-    target = identity.subject if assignee == "me" else assignee
-    stmt = (
-        select(ApprovalTask)
-        .where(ApprovalTask.assignee == target)
-        .order_by(ApprovalTask.created_at.desc())
-        .limit(limit)
-    )
+    stmt = select(ApprovalTask).order_by(ApprovalTask.created_at.desc()).limit(limit)
+    if assignee == "me":
+        stmt = stmt.where(ApprovalTask.assignee == identity.subject)
+    elif assignee and assignee != "*":
+        stmt = stmt.where(ApprovalTask.assignee == assignee)
+    if request_id:
+        stmt = stmt.where(ApprovalTask.request_id == request_id)
     if status_filter:
         stmt = stmt.where(ApprovalTask.status == status_filter)
     rows = await session.execute(stmt)

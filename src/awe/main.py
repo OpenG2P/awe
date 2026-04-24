@@ -25,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
 from .controllers import (
+    admin_router,
     health_router,
     policy_router,
     request_router,
@@ -129,6 +130,13 @@ openapi_tags = [
         ),
     },
     {
+        "name": "admin",
+        "description": (
+            "Operational endpoints — inspect webhook deliveries, manually "
+            "retry failed/exhausted ones. Admin-only (`awe-admin` role)."
+        ),
+    },
+    {
         "name": "health",
         "description": (
             "Service-level endpoints — liveness/readiness probe, build "
@@ -157,6 +165,7 @@ app.include_router(health_router)
 app.include_router(policy_router)
 app.include_router(request_router)
 app.include_router(task_router)
+app.include_router(admin_router)
 
 
 # ---------------------------------------------------------------------------

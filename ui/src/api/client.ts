@@ -94,6 +94,20 @@ export const api = {
   getRequest: (id: string) => request<ApprovalRequestOut>(`/requests/${id}`),
   getRequestEvents: (id: string) =>
     request<ApprovalEvent[]>(`/requests/${id}/events`),
+  getRequestTasks: (id: string) =>
+    request<TaskOut[]>(
+      `/tasks?assignee=*&request_id=${encodeURIComponent(id)}`
+    ),
+  listDeliveries: (params: { status?: string; request_id?: string } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => v && qs.append(k, String(v)));
+    return request<DeliveryOut[]>(`/admin/deliveries?${qs}`);
+  },
+  retryDelivery: (id: string) =>
+    request<DeliveryOut>(
+      `/admin/deliveries/${encodeURIComponent(id)}/retry`,
+      { method: "POST" }
+    ),
 };
 
 // ---------------------------------------------------------------------------
@@ -178,14 +192,20 @@ export interface SimulateResponse {
 
 export interface ApprovalRequestOut {
   id: string;
+  policy_id: string;
   policy_key: string;
   policy_version: number;
   artifact_type: string;
   artifact_id: string;
+  source_service: string;
+  requester?: string | null;
+  context: Record<string, unknown>;
   status: string;
   current_stage_order: number;
-  created_at: string;
+  callback_url?: string | null;
   completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ApprovalEvent {
@@ -201,4 +221,34 @@ export interface RequestQuery {
   artifact_id: string;
   status: string;
   limit: number;
+}
+
+export interface TaskOut {
+  id: string;
+  request_id: string;
+  stage_id: string;
+  stage_order: number;
+  assignee: string;
+  status: string;
+  claimed_at?: string | null;
+  completed_at?: string | null;
+  due_at?: string | null;
+  decision_id?: string | null;
+  created_at: string;
+}
+
+export interface DeliveryOut {
+  id: string;
+  event_id: string;
+  request_id: string;
+  event_type: string;
+  url: string;
+  status: "pending" | "delivered" | "failed" | "exhausted";
+  attempt: number;
+  next_attempt_at: string;
+  last_attempt_at?: string | null;
+  last_status_code?: number | null;
+  last_error?: string | null;
+  created_at: string;
+  updated_at: string;
 }

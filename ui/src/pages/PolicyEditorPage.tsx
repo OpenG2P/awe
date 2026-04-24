@@ -35,7 +35,6 @@ export default function PolicyEditorPage() {
         <Link
           to={`/policies/${encodeURIComponent(policyKey)}/versions/new`}
           className="btn-primary"
-          style={{ textDecoration: "none" }}
         >
           + New draft version
         </Link>

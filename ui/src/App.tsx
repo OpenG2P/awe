@@ -5,6 +5,7 @@ import PolicyEditorPage from "./pages/PolicyEditorPage";
 import PolicyFormPage from "./pages/PolicyFormPage";
 import SimulatePage from "./pages/SimulatePage";
 import RequestsPage from "./pages/RequestsPage";
+import RequestDetailPage from "./pages/RequestDetailPage";
 import WebhookDeliveriesPage from "./pages/WebhookDeliveriesPage";
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
           element={<SimulatePage />}
         />
         <Route path="/requests" element={<RequestsPage />} />
+        <Route path="/requests/:requestId" element={<RequestDetailPage />} />
         <Route path="/deliveries" element={<WebhookDeliveriesPage />} />
       </Routes>
     </Layout>

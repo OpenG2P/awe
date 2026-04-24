@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 
@@ -46,10 +47,12 @@ export default function RequestsPage() {
               {data.map((r) => (
                 <tr key={r.id}>
                   <td style={{ fontFamily: "monospace", fontSize: 12 }}>
-                    {r.id.slice(0, 8)}…
+                    <Link to={`/requests/${r.id}`}>{r.id.slice(0, 8)}…</Link>
                   </td>
                   <td>
-                    {r.artifact_type}/{r.artifact_id}
+                    <Link to={`/requests/${r.id}`}>
+                      {r.artifact_type}/{r.artifact_id}
+                    </Link>
                   </td>
                   <td>
                     {r.policy_key} v{r.policy_version}

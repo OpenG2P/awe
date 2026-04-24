@@ -818,7 +818,7 @@
         "tags": [
           "tasks"
         ],
-        "summary": "List the caller's open tasks (assignee=me by default)",
+        "summary": "List tasks \u2014 by assignee (default = me) and/or by request_id",
         "operationId": "list_tasks_v1_awe_tasks_get",
         "security": [
           {
@@ -831,9 +831,34 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by assignee. Default `me` resolves to the token's `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page.",
               "default": "me",
               "title": "Assignee"
+            },
+            "description": "Filter by assignee. Default `me` resolves to the token's `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page."
+          },
+          {
+            "name": "request_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Request Id"
             }
           },
           {
@@ -849,7 +874,6 @@
                   "type": "null"
                 }
               ],
-              "default": "open",
               "title": "Status"
             }
           },
@@ -981,6 +1005,139 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DecisionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/awe/admin/deliveries": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List webhook deliveries \u2014 filter by status / request",
+        "operationId": "list_deliveries_v1_awe_admin_deliveries_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "request_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeliveryOut"
+                  },
+                  "title": "Response List Deliveries V1 Awe Admin Deliveries Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/awe/admin/deliveries/{delivery_id}/retry": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Manually re-queue a delivery (resets attempts, fires on next dispatcher tick)",
+        "operationId": "retry_delivery_v1_awe_admin_deliveries__delivery_id__retry_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delivery Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryOut"
                 }
               }
             }
@@ -1374,6 +1531,101 @@
           "created_at"
         ],
         "title": "DecisionOut"
+      },
+      "DeliveryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt"
+          },
+          "next_attempt_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Next Attempt At"
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At"
+          },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "event_id",
+          "request_id",
+          "event_type",
+          "url",
+          "status",
+          "attempt",
+          "next_attempt_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DeliveryOut"
       },
       "ErrorDetail": {
         "properties": {
@@ -2341,6 +2593,10 @@
     {
       "name": "webhooks",
       "description": "Outbound from AWE to the caller's `callback_url`. Declared here so callers can read the body schema + signed-header contract from the same OpenAPI spec as the rest of the API. AWE never invokes its own webhook \u2014 implementation lives in `awe.workers.webhook_dispatcher`."
+    },
+    {
+      "name": "admin",
+      "description": "Operational endpoints \u2014 inspect webhook deliveries, manually retry failed/exhausted ones. Admin-only (`awe-admin` role)."
     },
     {
       "name": "health",
