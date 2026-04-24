@@ -94,24 +94,47 @@ export async function initAuth(): Promise<CurrentUser> {
     return currentUser;
   }
 
+  // Stash on window so the error page in main.tsx can show the operator
+  // exactly which Keycloak URL / realm / clientId the SPA was trying to use.
+  (window as any).__AWE_AUTH_DEBUG__ = {
+    keycloakUrl: cfg.keycloak.url,
+    realm: cfg.keycloak.realm,
+    clientId: cfg.keycloak.clientId,
+    origin: window.location.origin,
+  };
+
   keycloak = new Keycloak({
     url: cfg.keycloak.url,
     realm: cfg.keycloak.realm,
     clientId: cfg.keycloak.clientId,
   });
 
-  const authenticated = await keycloak.init({
-    onLoad: "login-required",
-    // Silent SSO HTML helps across browser tabs; optional — skip if unsure.
-    // silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
-    checkLoginIframe: false,
-    pkceMethod: "S256",
-  });
+  // keycloak-js sometimes rejects init() with no argument (network error,
+  // malformed token, redirect-URI mismatch, etc.). Wrap it so the catch
+  // handler in main.tsx always gets a real Error with context.
+  let authenticated: boolean;
+  try {
+    authenticated = await keycloak.init({
+      onLoad: "login-required",
+      checkLoginIframe: false,
+      pkceMethod: "S256",
+    });
+  } catch (err) {
+    const detail =
+      err instanceof Error
+        ? err.message
+        : typeof err === "string"
+        ? err
+        : "keycloak-js init() rejected with no detail";
+    throw new Error(
+      `Keycloak init failed (url=${cfg.keycloak.url}, realm=${cfg.keycloak.realm}, clientId=${cfg.keycloak.clientId}): ${detail}`
+    );
+  }
 
   if (!authenticated) {
     // keycloak.init with login-required normally redirects; if we got here
     // without being authenticated, fail loud.
-    throw new Error("Keycloak login failed");
+    throw new Error("Keycloak login did not complete (user not authenticated after init)");
   }
 
   const parsed = keycloak.tokenParsed || {};
