@@ -120,10 +120,24 @@ keycloak-init:
         # Service-account user auto-created by Keycloak when the client
         # above has `serviceAccountsEnabled: true`. We grant it the built-in
         # `realm-management` roles needed to look up role / group members.
+        #
+        #   view-users    — list users, read role mappings. Required for
+        #                   both realm-role and client-role member queries.
+        #   view-clients  — translate clientId → internal UUID, required
+        #                   before hitting the client-role members endpoint
+        #                   (needed when approver rules reference roles
+        #                   defined on a Caller's client, e.g. Registry).
+        #   query-groups  — list group members for `group:` rules.
+        #
+        # These are realm-wide reads — the service account can enumerate
+        # users/clients across every client in the realm. If the realm has
+        # Fine-Grained Admin Permissions enabled, additional per-client
+        # grants are needed; see deployment.md.
         - username: service-account-awe-admin-resolver
           clientRoleMappings:
             realm-management:
               - "view-users"
+              - "view-clients"
               - "query-groups"
 
 awe:

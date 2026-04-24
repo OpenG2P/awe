@@ -89,7 +89,10 @@ class ApproverRule(Base, TimestampMixin):
     rule_type ∈ user | role | group | expression | http
     rule_value holds the type-specific payload:
       * user         → {"user_id": "u-123"}
-      * role         → {"role": "district-officer"}
+      * role         → {"role": "PROGRAM_MANAGER"[, "client": "registry-staff-portal"]}
+                       `client` optional — omit for a realm role, set to a
+                       clientId to resolve a client role (e.g. roles defined
+                       on a Caller's OIDC client).
       * group        → {"group": "/states/d1/officers"}
       * expression   → {"logic": <JSONLogic>}
       * http         → {"url": "https://caller/resolve"}

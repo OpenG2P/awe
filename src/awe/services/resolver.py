@@ -70,7 +70,10 @@ async def _resolve_one(
         return [value["user_id"]]
 
     if rule_type == "role":
-        return await _resolve_keycloak_role(value["role"])
+        # `client` is optional. If omitted → realm role. If present → the
+        # role is looked up on that client (useful when your staff roles
+        # live under a portal client, e.g. registry-staff-portal).
+        return await _resolve_keycloak_role(value["role"], value.get("client"))
 
     if rule_type == "group":
         return await _resolve_keycloak_group(value["group"])
@@ -107,24 +110,42 @@ async def _keycloak_admin_token() -> str:
         return resp.json()["access_token"]
 
 
-async def _resolve_keycloak_role(role: str) -> List[str]:
+async def _resolve_keycloak_role(role: str, client_id: str | None = None) -> List[str]:
+    """List users with `role` — realm role if `client_id` is None, else that client's role.
+
+    Client-role lookup needs the client's internal UUID, so we first translate
+    `clientId` → UUID via `GET /clients?clientId=...`. Requires `view-clients`
+    on the service account (in addition to `view-users`).
+    """
     cfg = get_settings().awe.keycloak
     try:
         token = await _keycloak_admin_token()
-        url = (
-            f"{cfg.base_url.rstrip('/')}/admin/realms/{cfg.realm}"
-            f"/roles/{role}/users"
-        )
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(
-                url,
-                headers={"Authorization": f"Bearer {token}"},
-                params={"max": 200},
-            )
+        base = f"{cfg.base_url.rstrip('/')}/admin/realms/{cfg.realm}"
+        headers = {"Authorization": f"Bearer {token}"}
+        async with httpx.AsyncClient(timeout=5.0) as http_client:
+            if client_id:
+                lookup = await http_client.get(
+                    f"{base}/clients",
+                    headers=headers,
+                    params={"clientId": client_id},
+                )
+                lookup.raise_for_status()
+                found = lookup.json()
+                if not found:
+                    raise ResolutionError(
+                        f"Keycloak client not found: {client_id}"
+                    )
+                uuid = found[0]["id"]
+                url = f"{base}/clients/{uuid}/roles/{role}/users"
+            else:
+                url = f"{base}/roles/{role}/users"
+            resp = await http_client.get(url, headers=headers, params={"max": 200})
             resp.raise_for_status()
             return [u["id"] for u in resp.json()]
     except httpx.HTTPError as e:
-        logger.warning("Keycloak role lookup failed for %s: %s", role, e)
+        logger.warning(
+            "Keycloak role lookup failed for %s (client=%s): %s", role, client_id, e
+        )
         raise ResolutionError(f"Keycloak role lookup failed: {e}") from e
 
 

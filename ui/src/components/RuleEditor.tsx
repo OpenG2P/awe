@@ -64,11 +64,23 @@ function renderValueEditor(
       );
     case "role":
       return (
-        <input
-          value={String(rule.rule_value.role ?? "")}
-          onChange={(e) => setField("role", e.target.value)}
-          placeholder="Keycloak realm role, e.g. district-officer"
-        />
+        <div style={{ display: "flex", gap: 8, flex: 1 }}>
+          <input
+            style={{ flex: 2 }}
+            value={String(rule.rule_value.role ?? "")}
+            onChange={(e) => setField("role", e.target.value)}
+            placeholder="Role name, e.g. PROGRAM_MANAGER"
+          />
+          <input
+            style={{ flex: 1 }}
+            value={String(rule.rule_value.client ?? "")}
+            onChange={(e) =>
+              setField("client", e.target.value || undefined)
+            }
+            placeholder="Client (optional; blank = realm role)"
+            title="Leave blank for a realm role. Set to a clientId (e.g. registry-staff-portal) to resolve a client role."
+          />
+        </div>
       );
     case "group":
       return (
