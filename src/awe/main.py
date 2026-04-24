@@ -89,6 +89,54 @@ async def lifespan(app: FastAPI):
     logger.info("Shutdown complete.")
 
 
+# Top-level tag metadata — order here drives rendering order in Swagger /
+# ReDoc / GitBook. Descriptions show up under each section heading; they
+# also enable tag-based grouping + collapsing in GitBook's OpenAPI viewer.
+openapi_tags = [
+    {
+        "name": "policies",
+        "description": (
+            "Policy CRUD, versioning, activation, and simulation. **Admin "
+            "surface only** — used by the bundled admin SPA and GitOps "
+            "tooling. Caller services should never call these endpoints."
+        ),
+    },
+    {
+        "name": "requests",
+        "description": (
+            "Service-to-service runtime endpoints. Callers POST here when "
+            "an artifact (CR, disbursement, …) is created, cancel when the "
+            "underlying artifact is withdrawn, and read the audit timeline "
+            "for display."
+        ),
+    },
+    {
+        "name": "tasks",
+        "description": (
+            "Approver-facing endpoints — list inbox, claim, submit a "
+            "decision. The caller service proxies these on behalf of the "
+            "end-user approver; approvers never talk to AWE directly."
+        ),
+    },
+    {
+        "name": "webhooks",
+        "description": (
+            "Outbound from AWE to the caller's `callback_url`. Declared "
+            "here so callers can read the body schema + signed-header "
+            "contract from the same OpenAPI spec as the rest of the API. "
+            "AWE never invokes its own webhook — implementation lives in "
+            "`awe.workers.webhook_dispatcher`."
+        ),
+    },
+    {
+        "name": "health",
+        "description": (
+            "Service-level endpoints — liveness/readiness probe, build "
+            "metadata, effective non-sensitive configuration. Unauthenticated."
+        ),
+    },
+]
+
 app = FastAPI(
     title="OpenG2P Approval Workflow Engine",
     description=(
@@ -98,6 +146,7 @@ app = FastAPI(
         "callbacks when state changes."
     ),
     version="0.1.0",
+    openapi_tags=openapi_tags,
     lifespan=lifespan,
     docs_url="/v1/awe/docs",
     redoc_url="/v1/awe/redoc",
@@ -120,6 +169,7 @@ app.include_router(task_router)
 # awe.workers.webhook_dispatcher.
 @app.webhooks.post(
     "approval-event",
+    tags=["webhooks"],
     summary="Approval workflow state change",
     description=(
         "Sent by AWE to the caller's `callback_url` whenever a status-changing "

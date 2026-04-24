@@ -1002,6 +1002,9 @@
   "webhooks": {
     "approval-event": {
       "post": {
+        "tags": [
+          "webhooks"
+        ],
         "summary": "Approval workflow state change",
         "description": "Sent by AWE to the caller's `callback_url` whenever a status-changing event occurs on an approval request \u2014 `request_created`, `stage_started`, `stage_completed`, `request_approved`, `request_rejected`, `request_cancelled`, or `task_expired`.\n\n**Signature scheme**: `X-Approval-Signature` is `sha256=` + HMAC-SHA256 over `<X-Approval-Timestamp>.<raw body>` using the per-caller shared secret. The caller must verify the signature, dedup on `X-Approval-Event-Id`, and return any 2xx within the configured timeout (default 10s). Non-2xx triggers retries on the schedule documented in functional-specifications (1m \u2192 5m \u2192 15m \u2192 1h \u2192 6h, ~27h total).",
         "operationId": "approval_callbackapproval_event_post",
@@ -2321,5 +2324,27 @@
         "scheme": "bearer"
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "policies",
+      "description": "Policy CRUD, versioning, activation, and simulation. **Admin surface only** \u2014 used by the bundled admin SPA and GitOps tooling. Caller services should never call these endpoints."
+    },
+    {
+      "name": "requests",
+      "description": "Service-to-service runtime endpoints. Callers POST here when an artifact (CR, disbursement, \u2026) is created, cancel when the underlying artifact is withdrawn, and read the audit timeline for display."
+    },
+    {
+      "name": "tasks",
+      "description": "Approver-facing endpoints \u2014 list inbox, claim, submit a decision. The caller service proxies these on behalf of the end-user approver; approvers never talk to AWE directly."
+    },
+    {
+      "name": "webhooks",
+      "description": "Outbound from AWE to the caller's `callback_url`. Declared here so callers can read the body schema + signed-header contract from the same OpenAPI spec as the rest of the API. AWE never invokes its own webhook \u2014 implementation lives in `awe.workers.webhook_dispatcher`."
+    },
+    {
+      "name": "health",
+      "description": "Service-level endpoints \u2014 liveness/readiness probe, build metadata, effective non-sensitive configuration. Unauthenticated."
+    }
+  ]
 }
