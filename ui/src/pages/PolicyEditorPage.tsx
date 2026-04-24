@@ -3,10 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { getCurrentUser } from "../auth";
 
-// Fixed width so all action buttons (Simulate / Activate / Deactivate)
-// line up in the actions column even though their labels differ in length.
-// Sized to fit "Deactivate" snugly at rest; pending labels may wrap briefly.
-const actionBtnStyle: React.CSSProperties = { minWidth: 80 };
+// All action buttons share the `.icon-btn` base styles (same padding,
+// border-radius, font-size, height) so they line up horizontally in the
+// row. Widths are intentionally natural — each button hugs its label —
+// so short labels (Edit) don't get padded out and wide ones (Deactivate)
+// don't force everyone else wider than they need to be.
+const actionBtnStyle: React.CSSProperties = {};
 
 export default function PolicyEditorPage() {
   const { policyKey = "" } = useParams();
@@ -112,6 +114,8 @@ export default function PolicyEditorPage() {
                             to={`/policies/${encodeURIComponent(
                               policyKey
                             )}/versions/${v.version}/edit`}
+                            className="icon-btn"
+                            style={actionBtnStyle}
                           >
                             Edit
                           </Link>

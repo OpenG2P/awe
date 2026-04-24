@@ -81,12 +81,26 @@ keycloak-init:
           name: AWE Admin Portal
           description: OIDC client used by AWE's bundled admin SPA for policy authors.
           # SPA ⇒ public client with PKCE + Web Origins for the browser-side
-          # token exchange. The two extra fields below are IGNORED by
-          # keycloak-init v1.1.0 (it hardcodes publicClient=false and skips
-          # webOrigins) — until upstream accepts them, operators flip these
-          # manually in the Keycloak admin UI post-install. See deployment.md.
+          # token exchange. The upstream keycloak-init (≥ 1.1.0-develop)
+          # now honours this field, so the client is created as public at
+          # install time — no post-install UI toggle needed.
+          # See deployment.md for the "why public, not confidential"
+          # explanation (TL;DR: a browser can't keep a secret; PKCE
+          # replaces the client_secret cryptographically — RFC 8252, 7636).
           publicClient: true
-          redirectUris: ["*"]
+          # Explicit redirect URI (no wildcard). A `*` here would break
+          # CORS because Keycloak's `webOrigins: ["+"]` shorthand filters
+          # wildcard entries out, yielding an empty allowed-origins set
+          # and a silently-blocked browser token POST.
+          # The hostname is resolved at install time — the keycloak-init
+          # subchart's ConfigMap now runs `tpl` over the clients block,
+          # so `{{ ... }}` here expands against `.Values.global`. `tpl`
+          # wraps aweHostname so per-env overrides containing template
+          # expressions (e.g. "awe.{{ .Release.Namespace }}.…") also work.
+          redirectUris:
+            - 'https://{{ tpl .Values.global.aweHostname $ }}/*'
+          # "+" = "use the Valid Redirect URIs list above, filtered to
+          # non-wildcard entries". Works because redirectUris is explicit.
           webOrigins: ["+"]
           clientRoles:
             # AWE_ADMIN — full read + write (policies, cancellations, retries).
@@ -117,11 +131,14 @@ awe:
   nameOverride: awe
   hostname: '{{ tpl .Values.global.aweHostname $ }}'
 
-  replicaCount: 2
+  # Single replica for now — trial deployments see very low request volume
+  # and HPA adds churn without winning anything. Flip `autoscaling.enabled`
+  # to true and bump `minReplicas` when traffic actually warrants it.
+  replicaCount: 1
   autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 8
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 4
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
   updateStrategy:
