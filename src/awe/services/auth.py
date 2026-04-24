@@ -58,8 +58,25 @@ async def _fetch_jwks(jwks_url: str) -> dict:
 
 
 def _extract_roles(claims: dict) -> List[str]:
+    """Union of realm-scoped and client-scoped roles on the token.
+
+    OpenG2P's staff-realm convention (matching Registry / PBMS) scopes
+    authorization roles under a per-service client — `awe-admin` lives
+    under `resource_access.awe-admin-portal.roles`. We also accept realm
+    roles so legacy deployments and dev-mode fixtures keep working.
+    """
+    roles: set[str] = set()
+
     realm_access = claims.get("realm_access") or {}
-    return list(realm_access.get("roles") or [])
+    roles.update(realm_access.get("roles") or [])
+
+    # Every client-scoped role block under `resource_access` is included.
+    resource_access = claims.get("resource_access") or {}
+    for client_entry in resource_access.values():
+        if isinstance(client_entry, dict):
+            roles.update(client_entry.get("roles") or [])
+
+    return sorted(roles)
 
 
 async def _verify_token(token: str) -> dict:

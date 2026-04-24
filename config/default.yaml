@@ -24,9 +24,10 @@ awe:
 
   # Keycloak OIDC integration. Leave issuer empty for dev mode (no signature
   # verification on inbound bearers — never use in production).
+  # Defaults match the OpenG2P `staff` realm convention shared with Registry / PBMS.
   keycloak:
     base_url: ""
-    realm: openg2p
+    realm: staff
     admin_client_id: awe-admin-resolver
     admin_client_secret: ""
     issuer: ""

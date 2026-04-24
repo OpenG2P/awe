@@ -9,9 +9,19 @@ global:
   aweDBSecret: '{{ .Release.Name }}'
   aweDBUserPasswordKey: '{{ .Release.Name }}-db-user'
 
-  # Keycloak (left empty so dev installs work without OIDC; set in env-specific values)
-  keycloakBaseUrl: ''
-  keycloakRealm: 'openg2p'
+  # Keycloak (shared with Registry / PBMS — same realm, same commons-keycloak deployment)
+  keycloakBaseUrl: 'https://keycloak.{{ .Release.Namespace }}.openg2p.org'
+  keycloakRealm: 'staff'
+  keycloakIssuerUrl: '{{ tpl .Values.global.keycloakBaseUrl $ }}/realms/{{ tpl .Values.global.keycloakRealm $ }}'
+  # OIDC client the admin SPA redirects to for login
+  aweAdminPortalClientId: 'awe-admin-portal'
+  # Service-account client used by AWE to call Keycloak admin API (for
+  # `role:` and `group:` approver rule resolution)
+  aweAdminResolverClientId: 'awe-admin-resolver'
+  # K8s Secret holding the admin-resolver client secret. Created by
+  # keycloak-init during install.
+  aweAdminResolverSecretName: '{{ .Release.Name }}-awe-admin-resolver-client'
+  aweAdminResolverSecretKey: 'client-secret'
 
 postgres-init:
   enabled: true
@@ -25,6 +35,56 @@ postgres-init:
       user: '{{ tpl .Values.global.aweDBUser $ }}'
       secret: '{{ tpl .Values.global.aweDBSecret $ }}'
       secretUserPasswordKey: '{{ tpl .Values.global.aweDBUserPasswordKey $ }}'
+
+# ---------------------------------------------------------------------------
+# keycloak-init — provisions AWE's clients, roles, and role-mappings in the
+# shared `staff` realm. Mirrors the pattern used by openg2p-registry.
+#
+# Assumptions:
+#   * A commons-keycloak is already deployed in the namespace (shared by
+#     Registry / PBMS / AWE). Its auto-created admin secret is
+#     `<release>-keycloak`.
+#   * The `admin` user exists in the staff realm (created by the commons layer).
+#
+# Manual post-install step (one-time per deployment):
+#   Grant the `awe-admin-resolver` service account the realm-management
+#   roles `view-users` and `query-groups`. The keycloak-init chart (v1.1.0)
+#   creates the client but doesn't attach service-account roles; run
+#   `kcadm.sh add-roles` or click through the Keycloak admin UI.
+#   (Only required if you use `role:` or `group:` approver rules; skip if
+#   your policies use `user:` / `expression:` / `http:` only.)
+# ---------------------------------------------------------------------------
+keycloak-init:
+  enabled: true
+  keycloak:
+    url: 'http://commons-keycloak:80'
+    user: 'admin'
+    password: ''
+    existingSecret: 'commons-keycloak'
+    existingSecretKey: 'admin-password'
+  suffix: '{{ .Release.Namespace }}'
+  realms:
+    staff:
+      clients:
+        - clientId: awe-admin-portal
+          name: AWE Admin Portal
+          description: OIDC client used by AWE's bundled admin SPA for policy authors.
+          redirectUris: ["*"]
+          clientRoles:
+            - "awe-admin"
+        - clientId: awe-admin-resolver
+          name: AWE Admin Resolver (service account)
+          description: S2S client used by AWE to resolve Keycloak role/group members.
+          publicClient: false
+          serviceAccountsEnabled: true
+          standardFlowEnabled: false
+          directAccessGrantsEnabled: false
+      users:
+        # Assumes `admin` is already provisioned by the commons layer.
+        - username: admin
+          clientRoleMappings:
+            awe-admin-portal:
+              - "awe-admin"
 
 awe:
   enabled: true
@@ -115,12 +175,14 @@ awe:
       checkIntervalSeconds: 300
 
     keycloak:
-      baseUrl: '{{ .Values.global.keycloakBaseUrl }}'
-      realm: '{{ .Values.global.keycloakRealm }}'
-      adminClientId: awe-admin-resolver
-      issuer: ''
-      jwksUrl: ''
-      audience: ''
+      baseUrl: '{{ tpl .Values.global.keycloakBaseUrl $ }}'
+      realm: '{{ tpl .Values.global.keycloakRealm $ }}'
+      adminClientId: '{{ tpl .Values.global.aweAdminResolverClientId $ }}'
+      issuer: '{{ tpl .Values.global.keycloakIssuerUrl $ }}'
+      jwksUrl: '{{ tpl .Values.global.keycloakIssuerUrl $ }}/protocol/openid-connect/certs'
+      # Audience claim expected on inbound bearers. Matches the admin portal
+      # client id — tokens minted for that client carry `aud: awe-admin-portal`.
+      audience: '{{ tpl .Values.global.aweAdminPortalClientId $ }}'
 
     notifier:
       enabled: false
@@ -148,6 +210,11 @@ awe:
       secretKeyRef:
         name: '{{ tpl .Values.global.aweDBSecret $ }}'
         key: '{{ tpl .Values.global.aweDBUserPasswordKey $ }}'
+    # Keycloak admin-resolver client secret — provisioned by keycloak-init.
+    AWE__KEYCLOAK__ADMIN_CLIENT_SECRET:
+      secretKeyRef:
+        name: '{{ tpl .Values.global.aweAdminResolverSecretName $ }}'
+        key: '{{ .Values.global.aweAdminResolverSecretKey }}'
 
   startupProbe:
     enabled: true

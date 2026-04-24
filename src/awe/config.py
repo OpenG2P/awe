@@ -45,7 +45,10 @@ class SlaConfig(BaseModel):
 class KeycloakConfig(BaseModel):
     # Base URL of the Keycloak server (e.g. https://keycloak.example.org).
     base_url: str = ""
-    realm: str = "openg2p"
+    # Realm under which AWE's clients and roles are provisioned. Defaults to
+    # `staff` to match Registry / PBMS / other OpenG2P modules sharing a
+    # commons-keycloak deployment.
+    realm: str = "staff"
     # Admin client used to look up role/group members for approver resolution.
     admin_client_id: str = "awe-admin-resolver"
     admin_client_secret: str = ""
