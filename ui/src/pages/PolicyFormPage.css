@@ -18,6 +18,31 @@
   flex: 1;
 }
 
+/* Checkbox-style row: native check boxes, label text inline next to them.
+   Without this, the global `input { width: 100% }` rule above stretches
+   the boxes into giant rectangles. */
+.checkbox-row {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.checkbox-row > label.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-bottom: 0;
+  font-size: 13px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
 label {
   display: block;
   font-size: 12px;
@@ -101,6 +126,14 @@ input:disabled {
 .rule-row select,
 .rule-row input {
   margin-top: 0;
+}
+
+.rule-row input[type="checkbox"] {
+  width: auto;
+}
+
+.rule-row > select {
+  width: auto;
 }
 
 .rule-type-col {

@@ -273,9 +273,9 @@ export default function PolicyFormPage({ mode }: Props) {
             placeholder="Optional — what does this policy govern?"
           />
         </label>
-        <div className="form-row" style={{ marginTop: 8 }}>
+        <div className="form-row checkbox-row" style={{ marginTop: 8 }}>
           <label
-            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
+            className="checkbox-label"
             title="The user who initiated the request is filtered out of every stage's approver list."
           >
             <input
@@ -286,7 +286,7 @@ export default function PolicyFormPage({ mode }: Props) {
             Forbid self-approval
           </label>
           <label
-            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
+            className="checkbox-label"
             title="Anyone who approved an earlier stage is filtered out of later stages."
           >
             <input
