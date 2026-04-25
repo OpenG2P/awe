@@ -83,8 +83,16 @@ class ApprovalTask(Base, TimestampMixin):
     )
     stage_order: Mapped[int] = mapped_column(Integer, nullable=False)
     assignee: Mapped[str] = mapped_column(String(128), nullable=False)
+    # `approver` (counts toward stage completion) or `observer` (comment-only).
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="approver")
+    # If this task was created by delegation, the user id the task originally
+    # would have gone to. Purely informational — shown in audit/UI.
+    delegated_from: Mapped[Optional[str]] = mapped_column(String(128))
+    # If this task was created by an admin reassignment, the user id the task
+    # previously belonged to (the one whose task was closed as `reassigned`).
+    reassigned_from: Mapped[Optional[str]] = mapped_column(String(128))
 
-    # open | claimed | completed | skipped | expired
+    # open | claimed | completed | skipped | expired | reassigned
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
     claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

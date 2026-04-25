@@ -54,6 +54,8 @@ async def create_draft(
         name=payload.name,
         description=payload.description,
         artifact_type=payload.artifact_type,
+        forbid_self_approval=payload.forbid_self_approval,
+        forbid_repeat_approvers=payload.forbid_repeat_approvers,
         status="draft",
         created_by=actor,
     )
@@ -79,6 +81,8 @@ async def add_draft_version(
         name=payload.name,
         description=payload.description,
         artifact_type=payload.artifact_type,
+        forbid_self_approval=payload.forbid_self_approval,
+        forbid_repeat_approvers=payload.forbid_repeat_approvers,
         status="draft",
         created_by=actor,
     )
@@ -112,6 +116,8 @@ async def update_draft(
     policy.name = payload.name
     policy.description = payload.description
     policy.artifact_type = payload.artifact_type
+    policy.forbid_self_approval = payload.forbid_self_approval
+    policy.forbid_repeat_approvers = payload.forbid_repeat_approvers
     if actor:
         policy.created_by = actor
 
@@ -259,12 +265,25 @@ def _attach_stages(policy: ApprovalPolicy, stages: List[StageIn]) -> None:
             sla_hours=stage_in.sla_hours,
             skip_if=stage_in.skip_if,
             on_empty=stage_in.on_empty,
+            parallel_group=stage_in.parallel_group,
+            on_breach=stage_in.on_breach,
+            escalation_rules_json=[
+                {
+                    "rule_type": r.rule_type,
+                    "rule_value": r.rule_value,
+                    "kind": r.kind,
+                    "required": r.required,
+                }
+                for r in stage_in.escalation_rules
+            ] or None,
         )
         for rule_in in stage_in.rules:
             stage.rules.append(
                 ApproverRule(
                     rule_type=rule_in.rule_type,
                     rule_value=rule_in.rule_value,
+                    kind=rule_in.kind,
+                    required=rule_in.required,
                 )
             )
         policy.stages.append(stage)

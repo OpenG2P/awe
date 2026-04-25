@@ -34,6 +34,8 @@ def policy_to_out(policy: ApprovalPolicy) -> PolicyOut:
         description=policy.description,
         status=policy.status,
         artifact_type=policy.artifact_type,
+        forbid_self_approval=policy.forbid_self_approval,
+        forbid_repeat_approvers=policy.forbid_repeat_approvers,
         created_by=policy.created_by,
         created_at=policy.created_at,
         updated_at=policy.updated_at,
@@ -52,6 +54,16 @@ def policy_version_to_out(policy: ApprovalPolicy) -> PolicyVersionOut:
 
 
 def stage_to_out(stage: ApprovalStage) -> StageOut:
+    esc = [
+        ApproverRuleOut(
+            id=f"esc-{stage.id}-{i}",
+            rule_type=r.get("rule_type", "user"),
+            rule_value=r.get("rule_value", {}),
+            kind=r.get("kind", "approver"),
+            required=r.get("required", False),
+        )
+        for i, r in enumerate(stage.escalation_rules_json or [])
+    ]
     return StageOut(
         id=stage.id,
         stage_order=stage.stage_order,
@@ -61,6 +73,9 @@ def stage_to_out(stage: ApprovalStage) -> StageOut:
         sla_hours=stage.sla_hours,
         skip_if=stage.skip_if,
         on_empty=stage.on_empty,
+        parallel_group=stage.parallel_group,
+        on_breach=stage.on_breach,
+        escalation_rules=esc,
         rules=[rule_to_out(r) for r in stage.rules],
     )
 
@@ -70,6 +85,8 @@ def rule_to_out(rule: ApproverRule) -> ApproverRuleOut:
         id=rule.id,
         rule_type=rule.rule_type,
         rule_value=rule.rule_value,
+        kind=rule.kind,
+        required=rule.required,
     )
 
 
@@ -100,6 +117,9 @@ def task_to_out(task: ApprovalTask) -> TaskOut:
         stage_id=task.stage_id,
         stage_order=task.stage_order,
         assignee=task.assignee,
+        kind=task.kind,
+        delegated_from=task.delegated_from,
+        reassigned_from=task.reassigned_from,
         status=task.status,
         claimed_at=task.claimed_at,
         completed_at=task.completed_at,

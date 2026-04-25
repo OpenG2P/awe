@@ -6,6 +6,7 @@ import "./Layout.css";
 const nav = [
   { to: "/policies", label: "Policies" },
   { to: "/requests", label: "Requests" },
+  { to: "/delegations", label: "Delegations" },
   { to: "/deliveries", label: "Webhook Deliveries" },
   { to: "/audit", label: "Audit Log" },
 ];

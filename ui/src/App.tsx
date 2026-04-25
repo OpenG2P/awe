@@ -8,6 +8,7 @@ import RequestsPage from "./pages/RequestsPage";
 import RequestDetailPage from "./pages/RequestDetailPage";
 import WebhookDeliveriesPage from "./pages/WebhookDeliveriesPage";
 import AuditLogPage from "./pages/AuditLogPage";
+import DelegationsPage from "./pages/DelegationsPage";
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
         />
         <Route path="/requests" element={<RequestsPage />} />
         <Route path="/requests/:requestId" element={<RequestDetailPage />} />
+        <Route path="/delegations" element={<DelegationsPage />} />
         <Route path="/deliveries" element={<WebhookDeliveriesPage />} />
         <Route path="/audit" element={<AuditLogPage />} />
       </Routes>

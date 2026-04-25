@@ -17,9 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_db
 from ..models import ApprovalDecision, ApprovalRequest, ApprovalTask
 from ..models.base import utcnow
-from ..schemas.request import DecisionIn, DecisionOut, TaskOut
+from ..schemas.request import DecisionIn, DecisionOut, ReassignTaskIn, TaskOut
+from ..services import audit as audit_svc
 from ..services import engine as engine_svc
-from ..services.auth import CallerIdentity, current_identity
+from ..services.auth import CallerIdentity, current_identity, require_role
 from ._helpers import decision_to_out, error, task_to_out
 
 router = APIRouter(prefix="/v1/awe/tasks", tags=["tasks"])
@@ -130,3 +131,50 @@ async def decide(
         return error(409, "AWE-007", str(e))
 
     return decision_to_out(decision)
+
+
+@router.post(
+    "/{task_id}/reassign",
+    response_model=TaskOut,
+    summary="Reassign an open task to a different user (admin only)",
+)
+async def reassign(
+    task_id: str,
+    payload: ReassignTaskIn,
+    identity: CallerIdentity = Depends(require_role("AWE_ADMIN")),
+    session: AsyncSession = Depends(get_db),
+):
+    task = await session.get(ApprovalTask, task_id)
+    if task is None:
+        return error(404, "AWE-004", f"Task {task_id} not found")
+    request = await session.get(ApprovalRequest, task.request_id)
+    if request is None:
+        return error(404, "AWE-003", "Owning request not found (data inconsistency)")
+    try:
+        new_task = await engine_svc.reassign_task(
+            session=session,
+            request=request,
+            task=task,
+            new_assignee=payload.new_assignee,
+            actor=identity.subject,
+            reason=payload.reason,
+        )
+    except engine_svc.EngineError as e:
+        return error(409, "AWE-007", str(e))
+
+    await audit_svc.record(
+        session,
+        identity=identity,
+        action="task.reassign",
+        resource_type="task",
+        resource_id=task.id,
+        summary=(
+            f"Reassigned stage-{task.stage_order} task from {task.assignee} "
+            f"to {payload.new_assignee}"
+            + (f" ({payload.reason})" if payload.reason else "")
+        ),
+        before={"assignee": task.assignee, "status": "open"},
+        after={"assignee": payload.new_assignee, "status": "open", "new_task_id": new_task.id},
+        metadata={"request_id": request.id, "reason": payload.reason},
+    )
+    return task_to_out(new_task)

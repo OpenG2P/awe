@@ -31,12 +31,20 @@ class TaskOut(BaseModel):
     stage_id: str
     stage_order: int
     assignee: str
+    kind: str = "approver"
+    delegated_from: Optional[str] = None
+    reassigned_from: Optional[str] = None
     status: str
     claimed_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     due_at: Optional[datetime] = None
     decision_id: Optional[str] = None
     created_at: datetime
+
+
+class ReassignTaskIn(BaseModel):
+    new_assignee: str = Field(..., examples=["u-bob"], min_length=1)
+    reason: Optional[str] = None
 
 
 class CreateRequestOut(BaseModel):

@@ -23,6 +23,7 @@ from fastapi import FastAPI, Header
 
 from .controllers import (
     admin_router,
+    delegation_router,
     health_router,
     policy_router,
     request_router,
@@ -164,6 +165,7 @@ app.include_router(policy_router)
 app.include_router(request_router)
 app.include_router(task_router)
 app.include_router(admin_router)
+app.include_router(delegation_router)
 
 
 # ---------------------------------------------------------------------------

@@ -30,12 +30,24 @@ function policyToStages(p: Policy): StageCreate[] {
     mode: s.mode,
     mode_value: s.mode_value ?? null,
     sla_hours: s.sla_hours ?? null,
-    // on_empty isn't on the read model (yet) — default to block, the safer option.
-    on_empty: "block",
+    on_empty: s.on_empty ?? "block",
+    parallel_group: s.parallel_group ?? null,
+    on_breach: s.on_breach ?? null,
+    skip_if: s.skip_if ?? null,
+    escalation_rules: (s.escalation_rules ?? []).map(
+      (r): RuleCreate => ({
+        rule_type: r.rule_type as RuleCreate["rule_type"],
+        rule_value: r.rule_value,
+        kind: r.kind ?? "approver",
+        required: !!r.required,
+      })
+    ),
     rules: s.rules.map(
       (r): RuleCreate => ({
         rule_type: r.rule_type as RuleCreate["rule_type"],
         rule_value: r.rule_value,
+        kind: r.kind ?? "approver",
+        required: !!r.required,
       })
     ),
   }));
@@ -54,6 +66,8 @@ export default function PolicyFormPage({ mode }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [artifactType, setArtifactType] = useState("");
+  const [forbidSelf, setForbidSelf] = useState(false);
+  const [forbidRepeat, setForbidRepeat] = useState(false);
   const [stages, setStages] = useState<StageCreate[]>([blankStage(1)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +98,8 @@ export default function PolicyFormPage({ mode }: Props) {
         setName(seed.name);
         setDescription(seed.description ?? "");
         setArtifactType(seed.artifact_type);
+        setForbidSelf(!!seed.forbid_self_approval);
+        setForbidRepeat(!!seed.forbid_repeat_approvers);
         setStages(policyToStages(seed));
       } catch (e) {
         if (!cancelled) {
@@ -161,6 +177,8 @@ export default function PolicyFormPage({ mode }: Props) {
       name: name.trim(),
       description: description.trim() || undefined,
       artifact_type: artifactType.trim(),
+      forbid_self_approval: forbidSelf,
+      forbid_repeat_approvers: forbidRepeat,
       stages,
     };
 
@@ -255,6 +273,30 @@ export default function PolicyFormPage({ mode }: Props) {
             placeholder="Optional — what does this policy govern?"
           />
         </label>
+        <div className="form-row" style={{ marginTop: 8 }}>
+          <label
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
+            title="The user who initiated the request is filtered out of every stage's approver list."
+          >
+            <input
+              type="checkbox"
+              checked={forbidSelf}
+              onChange={(e) => setForbidSelf(e.target.checked)}
+            />
+            Forbid self-approval
+          </label>
+          <label
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
+            title="Anyone who approved an earlier stage is filtered out of later stages."
+          >
+            <input
+              type="checkbox"
+              checked={forbidRepeat}
+              onChange={(e) => setForbidRepeat(e.target.checked)}
+            />
+            Forbid repeat approvers across stages
+          </label>
+        </div>
       </div>
 
       <div className="card">

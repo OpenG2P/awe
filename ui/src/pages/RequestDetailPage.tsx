@@ -1,9 +1,29 @@
 import { Link, useParams } from "react-router-dom";
-import { useQueries } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { getCurrentUser } from "../auth";
 
 export default function RequestDetailPage() {
   const { requestId = "" } = useParams();
+  const user = getCurrentUser();
+  const qc = useQueryClient();
+  const reassign = useMutation({
+    mutationFn: (vars: { taskId: string; newAssignee: string; reason?: string }) =>
+      api.reassignTask(vars.taskId, vars.newAssignee, vars.reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["request-tasks", requestId] });
+      qc.invalidateQueries({ queryKey: ["request-events", requestId] });
+    },
+  });
+
+  function promptReassign(taskId: string, currentAssignee: string) {
+    const newAssignee = window.prompt(
+      `Reassign task currently held by '${currentAssignee}' to which user id?`
+    );
+    if (!newAssignee || newAssignee.trim() === "") return;
+    const reason = window.prompt("Reason (optional)") || undefined;
+    reassign.mutate({ taskId, newAssignee: newAssignee.trim(), reason });
+  }
 
   const [requestQ, tasksQ, eventsQ, deliveriesQ] = useQueries({
     queries: [
@@ -114,16 +134,45 @@ export default function RequestDetailPage() {
               <thead>
                 <tr>
                   <th>Assignee</th>
+                  <th>Kind</th>
                   <th>Status</th>
                   <th>Due</th>
                   <th>Claimed</th>
                   <th>Completed</th>
+                  {user.isAdmin && <th></th>}
                 </tr>
               </thead>
               <tbody>
                 {tasksByStage.get(order)!.map((t) => (
                   <tr key={t.id}>
-                    <td>{t.assignee}</td>
+                    <td>
+                      {t.assignee}
+                      {t.delegated_from && (
+                        <span
+                          style={{
+                            color: "var(--color-text-muted)",
+                            fontSize: 11,
+                            marginLeft: 6,
+                          }}
+                          title={`Originally for ${t.delegated_from}`}
+                        >
+                          (← {t.delegated_from})
+                        </span>
+                      )}
+                      {t.reassigned_from && (
+                        <span
+                          style={{
+                            color: "var(--color-text-muted)",
+                            fontSize: 11,
+                            marginLeft: 6,
+                          }}
+                          title={`Reassigned from ${t.reassigned_from}`}
+                        >
+                          (reassigned from {t.reassigned_from})
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ fontSize: 12 }}>{t.kind ?? "approver"}</td>
                     <td>
                       <span className={`status-pill status-${t.status}`}>
                         {t.status}
@@ -142,6 +191,20 @@ export default function RequestDetailPage() {
                         ? new Date(t.completed_at).toLocaleString()
                         : "—"}
                     </td>
+                    {user.isAdmin && (
+                      <td>
+                        {(t.status === "open" || t.status === "claimed") &&
+                          t.kind !== "observer" && (
+                            <button
+                              className="icon-btn"
+                              onClick={() => promptReassign(t.id, t.assignee)}
+                              disabled={reassign.isPending}
+                            >
+                              Reassign
+                            </button>
+                          )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

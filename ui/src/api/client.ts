@@ -107,6 +107,25 @@ export const api = {
     Object.entries(params).forEach(([k, v]) => v && qs.append(k, String(v)));
     return request<AuditActionOut[]>(`/admin/audit?${qs}`);
   },
+  reassignTask: (taskId: string, newAssignee: string, reason?: string) =>
+    request<TaskOut>(`/tasks/${encodeURIComponent(taskId)}/reassign`, {
+      method: "POST",
+      body: JSON.stringify({ new_assignee: newAssignee, reason }),
+    }),
+  listDelegations: (userId?: string) => {
+    const qs = new URLSearchParams();
+    if (userId) qs.append("user_id", userId);
+    return request<DelegationOut[]>(`/delegations?${qs}`);
+  },
+  createDelegation: (payload: DelegationCreate) =>
+    request<DelegationOut>(`/delegations`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  deleteDelegation: (id: string) =>
+    request<void>(`/delegations/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 };
 
 // ---------------------------------------------------------------------------
@@ -120,6 +139,8 @@ export interface Policy {
   description?: string | null;
   status: "draft" | "active" | "archived";
   artifact_type: string;
+  forbid_self_approval?: boolean;
+  forbid_repeat_approvers?: boolean;
   created_at: string;
   updated_at: string;
   stages: Stage[];
@@ -140,13 +161,20 @@ export interface Stage {
   mode: string;
   mode_value?: number | null;
   sla_hours?: number | null;
+  parallel_group?: number | null;
+  on_breach?: "notify" | "auto_approve" | "auto_reject" | "escalate" | null;
+  on_empty?: "skip" | "block";
+  skip_if?: Record<string, unknown> | null;
   rules: Rule[];
+  escalation_rules?: Rule[];
 }
 
 export interface Rule {
   id: string;
   rule_type: string;
   rule_value: Record<string, unknown>;
+  kind?: "approver" | "observer";
+  required?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +185,8 @@ export interface PolicyCreate {
   name: string;
   description?: string;
   artifact_type: string;
+  forbid_self_approval?: boolean;
+  forbid_repeat_approvers?: boolean;
   stages: StageCreate[];
 }
 
@@ -167,12 +197,18 @@ export interface StageCreate {
   mode_value?: number | null;
   sla_hours?: number | null;
   on_empty: "skip" | "block";
+  parallel_group?: number | null;
+  on_breach?: "notify" | "auto_approve" | "auto_reject" | "escalate" | null;
+  escalation_rules?: RuleCreate[];
+  skip_if?: Record<string, unknown> | null;
   rules: RuleCreate[];
 }
 
 export interface RuleCreate {
   rule_type: "user" | "role" | "group" | "expression" | "http";
   rule_value: Record<string, unknown>;
+  kind?: "approver" | "observer";
+  required?: boolean;
 }
 
 export interface SimulateResponse {
@@ -228,12 +264,35 @@ export interface TaskOut {
   stage_id: string;
   stage_order: number;
   assignee: string;
+  kind?: "approver" | "observer";
+  delegated_from?: string | null;
+  reassigned_from?: string | null;
   status: string;
   claimed_at?: string | null;
   completed_at?: string | null;
   due_at?: string | null;
   decision_id?: string | null;
   created_at: string;
+}
+
+export interface DelegationOut {
+  id: string;
+  user_id: string;
+  delegate_to: string;
+  starts_at: string;
+  ends_at: string;
+  reason?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DelegationCreate {
+  user_id: string;
+  delegate_to: string;
+  starts_at: string;
+  ends_at: string;
+  reason?: string;
 }
 
 export interface DeliveryOut {

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .audit import AuditAction
 from .base import Base
+from .delegation import UserDelegation
 from .policy import ApprovalPolicy, ApprovalStage, ApproverRule
 from .request import ApprovalDecision, ApprovalEvent, ApprovalRequest, ApprovalTask
 from .secret import CallbackSecret, IdempotencyKey
@@ -34,6 +35,7 @@ __all__ = [
     "CallbackSecret",
     "IdempotencyKey",
     "AuditAction",
+    "UserDelegation",
     "create_schema",
 ]
 
