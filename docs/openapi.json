@@ -1078,6 +1078,63 @@
         }
       }
     },
+    "/v1/awe/tasks/{task_id}/reassign": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Reassign an open task to a different user (admin only)",
+        "operationId": "reassign_v1_awe_tasks__task_id__reassign_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReassignTaskIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/awe/admin/deliveries": {
       "get": {
         "tags": [
@@ -1366,6 +1423,160 @@
           }
         }
       }
+    },
+    "/v1/awe/delegations": {
+      "get": {
+        "tags": [
+          "delegations"
+        ],
+        "summary": "List delegations \u2014 filter by user",
+        "operationId": "list_delegations_v1_awe_delegations_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DelegationOut"
+                  },
+                  "title": "Response List Delegations V1 Awe Delegations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "delegations"
+        ],
+        "summary": "Create a delegation window (admin only)",
+        "operationId": "create_delegation_v1_awe_delegations_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DelegationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DelegationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/awe/delegations/{delegation_id}": {
+      "delete": {
+        "tags": [
+          "delegations"
+        ],
+        "summary": "Delete a delegation (admin only)",
+        "operationId": "delete_delegation_v1_awe_delegations__delegation_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "delegation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delegation Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {
@@ -1459,6 +1670,18 @@
                 "role": "district-officer"
               }
             ]
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "'approver' counts toward stage completion; 'observer' gets a comment-only task.",
+            "default": "approver"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "description": "If true, every user resolved by this rule must approve (overrides quorum).",
+            "default": false
           }
         },
         "type": "object",
@@ -1486,6 +1709,18 @@
                 "role": "district-officer"
               }
             ]
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "'approver' counts toward stage completion; 'observer' gets a comment-only task.",
+            "default": "approver"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "description": "If true, every user resolved by this rule must approve (overrides quorum).",
+            "default": false
           },
           "id": {
             "type": "string",
@@ -1841,6 +2076,124 @@
         ],
         "title": "DecisionOut"
       },
+      "DelegationCreate": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "User Id",
+            "examples": [
+              "u-alice"
+            ]
+          },
+          "delegate_to": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Delegate To",
+            "examples": [
+              "u-bob"
+            ]
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "delegate_to",
+          "starts_at",
+          "ends_at"
+        ],
+        "title": "DelegationCreate"
+      },
+      "DelegationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "delegate_to": {
+            "type": "string",
+            "title": "Delegate To"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "delegate_to",
+          "starts_at",
+          "ends_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DelegationOut"
+      },
       "DeliveryOut": {
         "properties": {
           "id": {
@@ -2102,6 +2455,18 @@
               "registry.change_request"
             ]
           },
+          "forbid_self_approval": {
+            "type": "boolean",
+            "title": "Forbid Self Approval",
+            "description": "Filter the request's requester out of every stage's approver list.",
+            "default": false
+          },
+          "forbid_repeat_approvers": {
+            "type": "boolean",
+            "title": "Forbid Repeat Approvers",
+            "description": "Filter users who approved an earlier stage out of later stages.",
+            "default": false
+          },
           "stages": {
             "items": {
               "$ref": "#/components/schemas/StageIn"
@@ -2154,6 +2519,16 @@
           "artifact_type": {
             "type": "string",
             "title": "Artifact Type"
+          },
+          "forbid_self_approval": {
+            "type": "boolean",
+            "title": "Forbid Self Approval",
+            "default": false
+          },
+          "forbid_repeat_approvers": {
+            "type": "boolean",
+            "title": "Forbid Repeat Approvers",
+            "default": false
           },
           "created_by": {
             "anyOf": [
@@ -2230,6 +2605,34 @@
           "created_at"
         ],
         "title": "PolicyVersionOut"
+      },
+      "ReassignTaskIn": {
+        "properties": {
+          "new_assignee": {
+            "type": "string",
+            "minLength": 1,
+            "title": "New Assignee",
+            "examples": [
+              "u-bob"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "new_assignee"
+        ],
+        "title": "ReassignTaskIn"
       },
       "RequestOut": {
         "properties": {
@@ -2500,6 +2903,38 @@
             "title": "On Empty",
             "default": "block"
           },
+          "parallel_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parallel Group",
+            "description": "Stages sharing a parallel_group run concurrently and must all approve before the group completes. Null = stage is its own group (strictly sequential)."
+          },
+          "on_breach": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Breach",
+            "description": "What to do when every open task in the stage has crossed its due_at: 'notify' (default behaviour) / 'auto_approve' / 'auto_reject' / 'escalate'."
+          },
+          "escalation_rules": {
+            "items": {
+              "$ref": "#/components/schemas/ApproverRuleIn"
+            },
+            "type": "array",
+            "title": "Escalation Rules",
+            "description": "Rules resolved to add fresh approvers when on_breach='escalate'."
+          },
           "rules": {
             "items": {
               "$ref": "#/components/schemas/ApproverRuleIn"
@@ -2578,6 +3013,37 @@
             "title": "On Empty",
             "default": "block"
           },
+          "parallel_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parallel Group",
+            "description": "Stages sharing a parallel_group run concurrently and must all approve before the group completes. Null = stage is its own group (strictly sequential)."
+          },
+          "on_breach": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Breach",
+            "description": "What to do when every open task in the stage has crossed its due_at: 'notify' (default behaviour) / 'auto_approve' / 'auto_reject' / 'escalate'."
+          },
+          "escalation_rules": {
+            "items": {
+              "$ref": "#/components/schemas/ApproverRuleOut"
+            },
+            "type": "array",
+            "title": "Escalation Rules"
+          },
           "rules": {
             "items": {
               "$ref": "#/components/schemas/ApproverRuleOut"
@@ -2619,6 +3085,33 @@
           "assignee": {
             "type": "string",
             "title": "Assignee"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "approver"
+          },
+          "delegated_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delegated From"
+          },
+          "reassigned_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reassigned From"
           },
           "status": {
             "type": "string",
