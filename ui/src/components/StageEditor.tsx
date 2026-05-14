@@ -91,7 +91,6 @@ export default function StageEditor({
           >
             <option value="all">all — every approver must approve</option>
             <option value="any-n">any-n — first N approvals suffice</option>
-            <option value="quorum">quorum — alias for any-n</option>
             <option value="percentage">percentage — ceil(P% of approvers)</option>
           </select>
         </label>
