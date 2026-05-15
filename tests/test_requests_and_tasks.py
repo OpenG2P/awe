@@ -96,7 +96,7 @@ async def test_full_two_stage_flow(client, admin_token, service_token) -> None:
         "/v1/awe/tasks", headers=auth_header(_user_token("u-alice"))
     )
     assert resp.status_code == 200
-    alice_tasks = [t for t in resp.json() if t["request_id"] == request_id]
+    alice_tasks = [t for t in resp.json()["items"] if t["request_id"] == request_id]
     assert len(alice_tasks) == 1
     alice_task_id = alice_tasks[0]["id"]
 
@@ -118,7 +118,7 @@ async def test_full_two_stage_flow(client, admin_token, service_token) -> None:
         "/v1/awe/tasks", headers=auth_header(_user_token("u-director"))
     )
     assert resp.status_code == 200
-    director_tasks = [t for t in resp.json() if t["request_id"] == request_id]
+    director_tasks = [t for t in resp.json()["items"] if t["request_id"] == request_id]
     assert len(director_tasks) == 1
     director_task_id = director_tasks[0]["id"]
 
@@ -174,7 +174,7 @@ async def test_reject_terminates_request(client, admin_token, service_token) -> 
     # Alice rejects (any-1 + reject = stage rejected → request rejected)
     resp = await client.get("/v1/awe/tasks", headers=auth_header(_user_token("u-alice")))
     alice_task_id = next(
-        t["id"] for t in resp.json() if t["request_id"] == request_id
+        t["id"] for t in resp.json()["items"] if t["request_id"] == request_id
     )
     resp = await client.post(
         f"/v1/awe/tasks/{alice_task_id}/decision",
@@ -193,7 +193,7 @@ async def test_reject_terminates_request(client, admin_token, service_token) -> 
             "/v1/awe/tasks", headers=auth_header(_user_token("u-bob"))
         )
         bob_task_id = next(
-            t["id"] for t in resp.json() if t["request_id"] == request_id
+            t["id"] for t in resp.json()["items"] if t["request_id"] == request_id
         )
         await client.post(
             f"/v1/awe/tasks/{bob_task_id}/decision",

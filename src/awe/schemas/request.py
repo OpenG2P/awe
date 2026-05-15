@@ -45,6 +45,14 @@ class TaskOut(BaseModel):
     policy_key: Optional[str] = None
 
 
+class PagedTasksOut(BaseModel):
+    items: List[TaskOut]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
 class ReassignTaskIn(BaseModel):
     new_assignee: str = Field(..., examples=["u-bob"], min_length=1)
     reason: Optional[str] = None

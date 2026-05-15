@@ -10,15 +10,17 @@ from __future__ import annotations
 
 from typing import Optional
 
+import math
+
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..db import get_db
 from ..models import ApprovalDecision, ApprovalRequest, ApprovalTask
 from ..models.base import utcnow
-from ..schemas.request import DecisionIn, DecisionOut, ReassignTaskIn, TaskOut
+from ..schemas.request import DecisionIn, DecisionOut, PagedTasksOut, ReassignTaskIn, TaskOut
 from ..services import audit as audit_svc
 from ..services import engine as engine_svc
 from ..services.auth import CallerIdentity, current_identity, require_role
@@ -29,8 +31,8 @@ router = APIRouter(prefix="/v1/awe/tasks", tags=["tasks"])
 
 @router.get(
     "",
-    response_model=list[TaskOut],
-    summary="List tasks — by assignee (default = me) and/or by request_id",
+    response_model=PagedTasksOut,
+    summary="List tasks — paginated, by assignee (default = me) and/or by request_id",
 )
 async def list_tasks(
     assignee: Optional[str] = Query(
@@ -45,32 +47,65 @@ async def list_tasks(
     status_filter: Optional[str] = Query(default=None, alias="status"),
     artifact_type: Optional[str] = Query(default=None),
     policy_key: Optional[str] = Query(default=None),
-    limit: int = Query(default=100, ge=1, le=500),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
     identity: CallerIdentity = Depends(current_identity),
     session: AsyncSession = Depends(get_db),
 ):
+    # Collect task-level and request-level WHERE clauses separately so they
+    # can be applied to both the COUNT and the data query without duplication.
+    task_filters = []
+    if assignee == "me":
+        task_filters.append(ApprovalTask.assignee == identity.subject)
+    elif assignee and assignee != "*":
+        task_filters.append(ApprovalTask.assignee == assignee)
+    if request_id:
+        task_filters.append(ApprovalTask.request_id == request_id)
+    if status_filter:
+        task_filters.append(ApprovalTask.status == status_filter)
+
+    request_filters = []
+    if artifact_type:
+        request_filters.append(ApprovalRequest.artifact_type == artifact_type)
+    if policy_key:
+        request_filters.append(ApprovalRequest.policy_key == policy_key)
+
+    def _apply_request_join(stmt):
+        return (
+            stmt
+            .join(ApprovalRequest, ApprovalTask.request_id == ApprovalRequest.id)
+            .where(*request_filters)
+        )
+
+    # Total count (no offset/limit)
+    count_stmt = select(func.count(ApprovalTask.id)).where(*task_filters)
+    if request_filters:
+        count_stmt = _apply_request_join(count_stmt)
+    total: int = await session.scalar(count_stmt) or 0
+
+    # Paginated data
+    offset = (page - 1) * page_size
     stmt = (
         select(ApprovalTask)
         .options(selectinload(ApprovalTask.request))
+        .where(*task_filters)
         .order_by(ApprovalTask.created_at.desc())
-        .limit(limit)
+        .offset(offset)
+        .limit(page_size)
     )
-    if assignee == "me":
-        stmt = stmt.where(ApprovalTask.assignee == identity.subject)
-    elif assignee and assignee != "*":
-        stmt = stmt.where(ApprovalTask.assignee == assignee)
-    if request_id:
-        stmt = stmt.where(ApprovalTask.request_id == request_id)
-    if status_filter:
-        stmt = stmt.where(ApprovalTask.status == status_filter)
-    if artifact_type or policy_key:
-        stmt = stmt.join(ApprovalRequest, ApprovalTask.request_id == ApprovalRequest.id)
-        if artifact_type:
-            stmt = stmt.where(ApprovalRequest.artifact_type == artifact_type)
-        if policy_key:
-            stmt = stmt.where(ApprovalRequest.policy_key == policy_key)
+    if request_filters:
+        stmt = _apply_request_join(stmt)
+
     rows = await session.execute(stmt)
-    return [task_to_out(t, t.request) for t in rows.scalars()]
+    tasks = rows.scalars().all()
+
+    return PagedTasksOut(
+        items=[task_to_out(t, t.request) for t in tasks],
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=math.ceil(total / page_size) if total else 1,
+    )
 
 
 @router.post(

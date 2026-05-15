@@ -78,10 +78,17 @@ export const api = {
   getRequest: (id: string) => request<ApprovalRequestOut>(`/requests/${id}`),
   getRequestEvents: (id: string) =>
     request<ApprovalEvent[]>(`/requests/${id}/events`),
+  listTasks: (params: Partial<TaskQuery> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(
+      ([k, v]) => v !== undefined && v !== null && qs.append(k, String(v))
+    );
+    return request<PagedTasksOut>(`/tasks?${qs}`);
+  },
   getRequestTasks: (id: string) =>
-    request<TaskOut[]>(
-      `/tasks?assignee=*&request_id=${encodeURIComponent(id)}`
-    ),
+    request<PagedTasksOut>(
+      `/tasks?assignee=*&request_id=${encodeURIComponent(id)}&page_size=100`
+    ).then((r) => r.items),
   listDeliveries: (params: { status?: string; request_id?: string } = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => v && qs.append(k, String(v)));
@@ -273,6 +280,27 @@ export interface TaskOut {
   due_at?: string | null;
   decision_id?: string | null;
   created_at: string;
+  context?: Record<string, unknown> | null;
+  artifact_type?: string | null;
+  policy_key?: string | null;
+}
+
+export interface PagedTasksOut {
+  items: TaskOut[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export interface TaskQuery {
+  assignee: string;
+  request_id: string;
+  status: string;
+  artifact_type: string;
+  policy_key: string;
+  page: number;
+  page_size: number;
 }
 
 export interface DelegationOut {

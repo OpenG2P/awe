@@ -219,6 +219,6 @@ async def test_tasks_request_id_filter(
         headers=auth_header(service_token),
     )
     assert resp.status_code == 200
-    tasks = resp.json()
+    tasks = resp.json()["items"]
     assert len(tasks) == 1
     assert tasks[0]["request_id"] == request_id
