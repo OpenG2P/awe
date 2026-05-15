@@ -13,6 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ..db import get_db
 from ..models import ApprovalDecision, ApprovalRequest, ApprovalTask
@@ -42,11 +43,18 @@ async def list_tasks(
     ),
     request_id: Optional[str] = Query(default=None),
     status_filter: Optional[str] = Query(default=None, alias="status"),
+    artifact_type: Optional[str] = Query(default=None),
+    policy_key: Optional[str] = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     identity: CallerIdentity = Depends(current_identity),
     session: AsyncSession = Depends(get_db),
 ):
-    stmt = select(ApprovalTask).order_by(ApprovalTask.created_at.desc()).limit(limit)
+    stmt = (
+        select(ApprovalTask)
+        .options(selectinload(ApprovalTask.request))
+        .order_by(ApprovalTask.created_at.desc())
+        .limit(limit)
+    )
     if assignee == "me":
         stmt = stmt.where(ApprovalTask.assignee == identity.subject)
     elif assignee and assignee != "*":
@@ -55,8 +63,14 @@ async def list_tasks(
         stmt = stmt.where(ApprovalTask.request_id == request_id)
     if status_filter:
         stmt = stmt.where(ApprovalTask.status == status_filter)
+    if artifact_type or policy_key:
+        stmt = stmt.join(ApprovalRequest, ApprovalTask.request_id == ApprovalRequest.id)
+        if artifact_type:
+            stmt = stmt.where(ApprovalRequest.artifact_type == artifact_type)
+        if policy_key:
+            stmt = stmt.where(ApprovalRequest.policy_key == policy_key)
     rows = await session.execute(stmt)
-    return [task_to_out(t) for t in rows.scalars()]
+    return [task_to_out(t, t.request) for t in rows.scalars()]
 
 
 @router.post(

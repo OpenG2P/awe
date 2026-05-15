@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from fastapi.responses import JSONResponse
 
@@ -110,7 +110,7 @@ def request_to_out(req: ApprovalRequest) -> RequestOut:
     )
 
 
-def task_to_out(task: ApprovalTask) -> TaskOut:
+def task_to_out(task: ApprovalTask, request: Optional[ApprovalRequest] = None) -> TaskOut:
     return TaskOut(
         id=task.id,
         request_id=task.request_id,
@@ -126,6 +126,9 @@ def task_to_out(task: ApprovalTask) -> TaskOut:
         due_at=task.due_at,
         decision_id=task.decision_id,
         created_at=task.created_at,
+        context=request.context if request else None,
+        artifact_type=request.artifact_type if request else None,
+        policy_key=request.policy_key if request else None,
     )
 
 

@@ -40,6 +40,9 @@ class TaskOut(BaseModel):
     due_at: Optional[datetime] = None
     decision_id: Optional[str] = None
     created_at: datetime
+    context: Optional[Dict[str, Any]] = None
+    artifact_type: Optional[str] = None
+    policy_key: Optional[str] = None
 
 
 class ReassignTaskIn(BaseModel):
