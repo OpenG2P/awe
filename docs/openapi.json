@@ -874,7 +874,7 @@
         "tags": [
           "tasks"
         ],
-        "summary": "List tasks \u2014 by assignee (default = me) and/or by request_id",
+        "summary": "List tasks \u2014 paginated, by assignee (default = me) and/or by request_id",
         "operationId": "list_tasks_v1_awe_tasks_get",
         "security": [
           {
@@ -934,15 +934,58 @@
             }
           },
           {
-            "name": "limit",
+            "name": "artifact_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Artifact Type"
+            }
+          },
+          {
+            "name": "policy_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Policy Key"
+            }
+          },
+          {
+            "name": "page",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 500,
               "minimum": 1,
-              "default": 100,
-              "title": "Limit"
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
             }
           }
         ],
@@ -952,11 +995,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TaskOut"
-                  },
-                  "title": "Response List Tasks V1 Awe Tasks Get"
+                  "$ref": "#/components/schemas/PagedTasksOut"
                 }
               }
             }
@@ -2421,6 +2460,42 @@
         ],
         "title": "HealthResponse"
       },
+      "PagedTasksOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "pages"
+        ],
+        "title": "PagedTasksOut"
+      },
       "PolicyCreate": {
         "properties": {
           "policy_key": {
@@ -3168,6 +3243,40 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "artifact_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Type"
+          },
+          "policy_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Key"
           }
         },
         "type": "object",
