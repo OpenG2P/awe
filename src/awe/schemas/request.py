@@ -39,6 +39,8 @@ class TaskOut(BaseModel):
     completed_at: Optional[datetime] = None
     due_at: Optional[datetime] = None
     decision_id: Optional[str] = None
+    decision_action: Optional[str] = None
+    decision_comment: Optional[str] = None
     created_at: datetime
     context: Optional[Dict[str, Any]] = None
     artifact_type: Optional[str] = None

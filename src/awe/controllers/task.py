@@ -99,8 +99,19 @@ async def list_tasks(
     rows = await session.execute(stmt)
     tasks = rows.scalars().all()
 
+    decision_ids = [t.decision_id for t in tasks if t.decision_id]
+    decision_map: dict[str, ApprovalDecision] = {}
+    if decision_ids:
+        decision_rows = await session.execute(
+            select(ApprovalDecision).where(ApprovalDecision.id.in_(decision_ids))
+        )
+        decision_map = {d.id: d for d in decision_rows.scalars().all()}
+
     return PagedTasksOut(
-        items=[task_to_out(t, t.request) for t in tasks],
+        items=[
+            task_to_out(t, t.request, decision_map.get(t.decision_id) if t.decision_id else None)
+            for t in tasks
+        ],
         total=total,
         page=page,
         page_size=page_size,
