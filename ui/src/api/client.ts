@@ -17,6 +17,20 @@ export class ApiError extends Error {
   }
 }
 
+/** Normalize list endpoints — tasks API returns `{ items, total, … }`. */
+export function ensureArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value;
+  if (
+    value &&
+    typeof value === "object" &&
+    "items" in value &&
+    Array.isArray((value as PagedTasksOut).items)
+  ) {
+    return (value as PagedTasksOut).items as T[];
+  }
+  return [];
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const resp = await fetch(`${BASE}${path}`, {
     ...init,
@@ -75,9 +89,10 @@ export const api = {
     Object.entries(params).forEach(([k, v]) => v && qs.append(k, String(v)));
     return request<ApprovalRequestOut[]>(`/requests?${qs}`);
   },
-  getRequest: (id: string) => request<ApprovalRequestOut>(`/requests/${id}`),
+  getRequest: (id: string) =>
+    request<ApprovalRequestOut>(`/requests/${encodeURIComponent(id)}`),
   getRequestEvents: (id: string) =>
-    request<ApprovalEvent[]>(`/requests/${id}/events`),
+    request<ApprovalEvent[]>(`/requests/${encodeURIComponent(id)}/events`),
   listTasks: (params: Partial<TaskQuery> = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(
@@ -85,10 +100,12 @@ export const api = {
     );
     return request<PagedTasksOut>(`/tasks?${qs}`);
   },
-  getRequestTasks: (id: string) =>
-    request<PagedTasksOut>(
+  getRequestTasks: async (id: string) => {
+    const page = await request<PagedTasksOut>(
       `/tasks?assignee=*&request_id=${encodeURIComponent(id)}&page_size=100`
-    ).then((r) => r.items),
+    );
+    return ensureArray<TaskOut>(page);
+  },
   listDeliveries: (params: { status?: string; request_id?: string } = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => v && qs.append(k, String(v)));

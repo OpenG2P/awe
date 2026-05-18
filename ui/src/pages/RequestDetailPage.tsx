@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { api, ApiError, ensureArray } from "../api/client";
+import type { ApprovalEvent, DeliveryOut, TaskOut } from "../api/client";
 import { getCurrentUser } from "../auth";
 
 export default function RequestDetailPage() {
@@ -25,30 +26,64 @@ export default function RequestDetailPage() {
     reassign.mutate({ taskId, newAssignee: newAssignee.trim(), reason });
   }
 
+  const enabled = Boolean(requestId);
   const [requestQ, tasksQ, eventsQ, deliveriesQ] = useQueries({
     queries: [
-      { queryKey: ["request", requestId], queryFn: () => api.getRequest(requestId) },
+      {
+        queryKey: ["request", requestId],
+        queryFn: () => api.getRequest(requestId),
+        enabled,
+      },
       {
         queryKey: ["request-tasks", requestId],
         queryFn: () => api.getRequestTasks(requestId),
+        enabled,
       },
       {
         queryKey: ["request-events", requestId],
         queryFn: () => api.getRequestEvents(requestId),
+        enabled,
       },
       {
         queryKey: ["request-deliveries", requestId],
         queryFn: () => api.listDeliveries({ request_id: requestId }),
+        enabled,
       },
     ],
   });
 
   const request = requestQ.data;
-  const tasks = tasksQ.data ?? [];
-  const events = eventsQ.data ?? [];
-  const deliveries = deliveriesQ.data ?? [];
+  const tasks = ensureArray<TaskOut>(tasksQ.data);
+  const events = ensureArray<ApprovalEvent>(eventsQ.data);
+  const deliveries = ensureArray<DeliveryOut>(deliveriesQ.data);
 
-  if (requestQ.isLoading) return <p>Loading…</p>;
+  if (!enabled) {
+    return (
+      <>
+        <h1>Invalid request</h1>
+        <Link to="/requests">← Back to requests</Link>
+      </>
+    );
+  }
+
+  if (requestQ.isPending) return <p>Loading…</p>;
+
+  if (requestQ.isError) {
+    const message =
+      requestQ.error instanceof ApiError
+        ? requestQ.error.message
+        : requestQ.error instanceof Error
+          ? requestQ.error.message
+          : "Unknown error";
+    return (
+      <>
+        <h1>Failed to load request</h1>
+        <p style={{ color: "var(--color-text-muted)" }}>{message}</p>
+        <Link to="/requests">← Back to requests</Link>
+      </>
+    );
+  }
+
   if (!request) {
     return (
       <>
@@ -225,7 +260,7 @@ export default function RequestDetailPage() {
               <span style={{ color: "var(--color-text-muted)", fontSize: 12 }}>
                 {new Date(e.created_at).toLocaleString()}
               </span>
-              {Object.keys(e.payload).length > 0 && (
+              {e.payload && Object.keys(e.payload).length > 0 && (
                 <pre
                   style={{
                     background: "var(--color-light-grey)",

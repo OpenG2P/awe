@@ -110,7 +110,11 @@ def request_to_out(req: ApprovalRequest) -> RequestOut:
     )
 
 
-def task_to_out(task: ApprovalTask, request: Optional[ApprovalRequest] = None) -> TaskOut:
+def task_to_out(
+    task: ApprovalTask,
+    request: Optional[ApprovalRequest] = None,
+    decision: Optional[ApprovalDecision] = None,
+) -> TaskOut:
     return TaskOut(
         id=task.id,
         request_id=task.request_id,
@@ -125,6 +129,8 @@ def task_to_out(task: ApprovalTask, request: Optional[ApprovalRequest] = None) -
         completed_at=task.completed_at,
         due_at=task.due_at,
         decision_id=task.decision_id,
+        decision_action=decision.action if decision else None,
+        decision_comment=decision.comment if decision else None,
         created_at=task.created_at,
         context=request.context if request else None,
         artifact_type=request.artifact_type if request else None,
