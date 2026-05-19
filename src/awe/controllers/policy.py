@@ -24,6 +24,16 @@ from ..schemas.policy import (
 from ..services import audit as audit_svc
 from ..services import policy as policy_svc
 from ..services import resolver as resolver_svc
+from ..schemas.responses import (
+    ResponseBadPolicyDefinition,
+    ResponseForbiddenAdmin,
+    ResponseForbiddenViewerOrAdmin,
+    ResponsePolicyConflict,
+    ResponsePolicyNotFound,
+    ResponseResolverFailure,
+    ResponseStateConflict,
+    ResponseUnauthorized,
+)
 from ..services.auth import (
     ROLE_ADMIN,
     ROLE_VIEWER,
@@ -52,6 +62,11 @@ router = APIRouter(prefix="/v1/awe/policies", tags=["policies"])
     status_code=status.HTTP_201_CREATED,
     response_model=PolicyOut,
     summary="Create the first draft of a new policy",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponsePolicyConflict,
+    },
 )
 async def create_policy(
     payload: PolicyCreate,
@@ -78,6 +93,7 @@ async def create_policy(
     "",
     response_model=list[PolicyOut],
     summary="List policies (newest version of each policy_key)",
+    responses={**ResponseUnauthorized, **ResponseForbiddenViewerOrAdmin},
 )
 async def list_policies(
     identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
@@ -91,6 +107,11 @@ async def list_policies(
     "/{policy_key}/versions",
     response_model=list[PolicyVersionOut],
     summary="List all versions of a policy_key",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenViewerOrAdmin,
+        **ResponsePolicyNotFound,
+    },
 )
 async def list_versions(
     policy_key: str,
@@ -107,6 +128,11 @@ async def list_versions(
     "/{policy_key}/versions/{version}",
     response_model=PolicyOut,
     summary="Fetch a specific policy version with stages and rules",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenViewerOrAdmin,
+        **ResponsePolicyNotFound,
+    },
 )
 async def get_version(
     policy_key: str,
@@ -125,6 +151,12 @@ async def get_version(
     status_code=status.HTTP_201_CREATED,
     response_model=PolicyOut,
     summary="Add a new draft version under an existing policy_key",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponseBadPolicyDefinition,
+        **ResponsePolicyNotFound,
+    },
 )
 async def add_version(
     policy_key: str,
@@ -156,6 +188,13 @@ async def add_version(
     "/{policy_key}/versions/{version}",
     response_model=PolicyOut,
     summary="Edit a draft version in place (drafts only)",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponseBadPolicyDefinition,
+        **ResponsePolicyNotFound,
+        **ResponseStateConflict,
+    },
 )
 async def edit_draft(
     policy_key: str,
@@ -193,6 +232,11 @@ async def edit_draft(
     "/{policy_key}/versions/{version}/activate",
     response_model=PolicyOut,
     summary="Activate a specific version (archives the previously active one)",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponsePolicyNotFound,
+    },
 )
 async def activate(
     policy_key: str,
@@ -230,6 +274,12 @@ async def activate(
         "New POST /requests for this policy_key will fail with AWE-001 "
         "until another version is activated; in-flight requests continue."
     ),
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponsePolicyNotFound,
+        **ResponseStateConflict,
+    },
 )
 async def deactivate(
     policy_key: str,
@@ -260,6 +310,12 @@ async def deactivate(
     "/{policy_key}/versions/{version}/simulate",
     response_model=SimulateResponse,
     summary="Resolve approvers for a sample context — no DB writes",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenViewerOrAdmin,
+        **ResponsePolicyNotFound,
+        **ResponseResolverFailure,
+    },
 )
 async def simulate(
     policy_key: str,

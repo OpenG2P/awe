@@ -21,6 +21,13 @@ from ..db import get_db
 from ..models import ApprovalEvent, AuditAction, WebhookDelivery
 from ..models.base import utcnow
 from ..schemas.admin import AuditActionOut, DeliveryOut
+from ..schemas.responses import (
+    ResponseDeliveryNotFound,
+    ResponseForbiddenAdmin,
+    ResponseForbiddenViewerOrAdmin,
+    ResponseStateConflict,
+    ResponseUnauthorized,
+)
 from ..services import audit as audit_svc
 from ..services.auth import (
     ROLE_ADMIN,
@@ -56,6 +63,7 @@ def _to_out(delivery: WebhookDelivery, event: ApprovalEvent) -> DeliveryOut:
     "/deliveries",
     response_model=list[DeliveryOut],
     summary="List webhook deliveries — filter by status / request",
+    responses={**ResponseUnauthorized, **ResponseForbiddenViewerOrAdmin},
 )
 async def list_deliveries(
     status_filter: Optional[str] = Query(default=None, alias="status"),
@@ -82,6 +90,12 @@ async def list_deliveries(
     "/deliveries/{delivery_id}/retry",
     response_model=DeliveryOut,
     summary="Manually re-queue a delivery (resets attempts, fires on next dispatcher tick)",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponseDeliveryNotFound,
+        **ResponseStateConflict,
+    },
 )
 async def retry_delivery(
     delivery_id: str,
@@ -131,6 +145,7 @@ async def retry_delivery(
     "/audit",
     response_model=list[AuditActionOut],
     summary="Browse the audit trail of admin / ops actions — filter by actor, action, resource, or date range",
+    responses={**ResponseUnauthorized, **ResponseForbiddenViewerOrAdmin},
 )
 async def list_audit(
     actor: Optional[str] = Query(default=None),

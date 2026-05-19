@@ -18,6 +18,14 @@ from ..db import get_db
 from ..models import ApprovalDecision, ApprovalRequest, ApprovalTask
 from ..models.base import utcnow
 from ..schemas.request import DecisionIn, DecisionOut, ReassignTaskIn, TaskOut
+from ..schemas.responses import (
+    ResponseForbiddenAdmin,
+    ResponseForbiddenNotAssignee,
+    ResponseRequestNotFound,
+    ResponseStateConflict,
+    ResponseTaskNotFound,
+    ResponseUnauthorized,
+)
 from ..services import audit as audit_svc
 from ..services import engine as engine_svc
 from ..services.auth import CallerIdentity, current_identity, require_role
@@ -30,6 +38,7 @@ router = APIRouter(prefix="/v1/awe/tasks", tags=["tasks"])
     "",
     response_model=list[TaskOut],
     summary="List tasks — by assignee (default = me) and/or by request_id",
+    responses={**ResponseUnauthorized},
 )
 async def list_tasks(
     assignee: Optional[str] = Query(
@@ -63,6 +72,12 @@ async def list_tasks(
     "/{task_id}/claim",
     response_model=TaskOut,
     summary="Claim a task (intent-to-act marker; not required for decision)",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenNotAssignee,
+        **ResponseTaskNotFound,
+        **ResponseStateConflict,
+    },
 )
 async def claim_task(
     task_id: str,
@@ -87,6 +102,13 @@ async def claim_task(
     status_code=status.HTTP_201_CREATED,
     response_model=DecisionOut,
     summary="Record a decision (approve / reject / abstain) on a task",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenNotAssignee,
+        **ResponseTaskNotFound,
+        **ResponseRequestNotFound,
+        **ResponseStateConflict,
+    },
 )
 async def decide(
     task_id: str,
@@ -137,6 +159,13 @@ async def decide(
     "/{task_id}/reassign",
     response_model=TaskOut,
     summary="Reassign an open task to a different user (admin only)",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponseTaskNotFound,
+        **ResponseRequestNotFound,
+        **ResponseStateConflict,
+    },
 )
 async def reassign(
     task_id: str,

@@ -20,6 +20,7 @@ from ..schemas.common import (
     make_error_response,
     now_iso,
 )
+from ..schemas.responses import ResponseDBUnhealthy, ResponseServiceNotReady
 
 router = APIRouter(prefix="/v1/awe", tags=["health"])
 
@@ -30,7 +31,10 @@ router = APIRouter(prefix="/v1/awe", tags=["health"])
     response_model=HealthResponse,
     responses={
         200: {"model": HealthResponse, "description": "Service is ready."},
-        503: {"description": "Not ready (AWE-005 startup; AWE-006 db)."},
+        # 503 has two distinct error codes — declared together so both
+        # appear in the rendered OpenAPI without needing two status codes.
+        **ResponseServiceNotReady,
+        **ResponseDBUnhealthy,
     },
 )
 async def health():

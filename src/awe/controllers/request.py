@@ -31,6 +31,14 @@ from ..schemas.request import (
     EventOut,
     RequestOut,
 )
+from ..schemas.responses import (
+    ResponseBadCreateRequest,
+    ResponseForbiddenAdmin,
+    ResponsePolicyKeyHasNoActive,
+    ResponseRequestNotFound,
+    ResponseStateConflict,
+    ResponseUnauthorized,
+)
 from ..services import audit as audit_svc
 from ..services import engine as engine_svc
 from ..services import policy as policy_svc
@@ -50,6 +58,11 @@ router = APIRouter(prefix="/v1/awe/requests", tags=["requests"])
     status_code=status.HTTP_201_CREATED,
     response_model=CreateRequestOut,
     summary="Create an approval request for a caller-owned artifact",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseBadCreateRequest,
+        **ResponsePolicyKeyHasNoActive,
+    },
 )
 async def create_request(
     payload: CreateRequestIn,
@@ -118,6 +131,7 @@ async def create_request(
     "/{request_id}",
     response_model=RequestOut,
     summary="Fetch an approval request by id",
+    responses={**ResponseUnauthorized, **ResponseRequestNotFound},
 )
 async def get_request(
     request_id: str,
@@ -134,6 +148,7 @@ async def get_request(
     "",
     response_model=list[RequestOut],
     summary="Search requests by artifact reference and/or status",
+    responses={**ResponseUnauthorized},
 )
 async def search_requests(
     artifact_type: Optional[str] = Query(default=None),
@@ -159,6 +174,12 @@ async def search_requests(
     "/{request_id}/cancel",
     response_model=RequestOut,
     summary="Cancel an in-flight approval request (admin only)",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponseRequestNotFound,
+        **ResponseStateConflict,
+    },
 )
 async def cancel_request(
     request_id: str,
@@ -197,6 +218,7 @@ async def cancel_request(
     "/{request_id}/events",
     response_model=list[EventOut],
     summary="Timeline of every event for a request (audit log)",
+    responses={**ResponseUnauthorized},
 )
 async def request_events(
     request_id: str,

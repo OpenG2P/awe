@@ -22,6 +22,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_db
 from ..models import UserDelegation
 from ..schemas.delegation import DelegationCreate, DelegationOut
+from ..schemas.responses import (
+    ResponseDelegationNotFound,
+    ResponseForbiddenAdmin,
+    ResponseForbiddenViewerOrAdmin,
+    ResponseUnauthorized,
+)
 from ..services import audit as audit_svc
 from ..services.auth import (
     ROLE_ADMIN,
@@ -53,6 +59,7 @@ def _to_out(d: UserDelegation) -> DelegationOut:
     "",
     response_model=list[DelegationOut],
     summary="List delegations — filter by user",
+    responses={**ResponseUnauthorized, **ResponseForbiddenViewerOrAdmin},
 )
 async def list_delegations(
     user_id: Optional[str] = Query(default=None),
@@ -72,6 +79,7 @@ async def list_delegations(
     response_model=DelegationOut,
     status_code=status.HTTP_201_CREATED,
     summary="Create a delegation window (admin only)",
+    responses={**ResponseUnauthorized, **ResponseForbiddenAdmin},
 )
 async def create_delegation(
     payload: DelegationCreate,
@@ -115,6 +123,11 @@ async def create_delegation(
     "/{delegation_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a delegation (admin only)",
+    responses={
+        **ResponseUnauthorized,
+        **ResponseForbiddenAdmin,
+        **ResponseDelegationNotFound,
+    },
 )
 async def delete_delegation(
     delegation_id: str,

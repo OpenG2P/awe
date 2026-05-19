@@ -25,7 +25,25 @@
             }
           },
           "503": {
-            "description": "Not ready (AWE-005 startup; AWE-006 db)."
+            "description": "Health probe failed to reach the database.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-006",
+                      "message": "Database health check failed"
+                    }
+                  ]
+                }
+              }
+            }
           }
         }
       }
@@ -91,6 +109,48 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         "security": [
@@ -122,6 +182,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Policy version conflict \u2014 typically a duplicate `policy_key` on create, or attempting to edit/activate a version in the wrong status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-002",
+                      "message": "policy_key 'registry.cr.v1' already exists (latest v3)"
+                    }
+                  ]
                 }
               }
             }
@@ -182,6 +305,69 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching policy / policy version exists.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-001",
+                      "message": "Policy 'registry.cr.v1' not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -234,6 +420,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching policy / policy version exists.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-001",
+                      "message": "Policy 'registry.cr.v1' not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -302,6 +551,111 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Policy body violates a structural rule (e.g. URL/body key mismatch).",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-010",
+                      "message": "policy_key in body must match URL"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching policy / policy version exists.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-001",
+                      "message": "Policy 'registry.cr.v1' not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource is in a state that disallows this transition. Examples: request is already in a terminal state (`approved`/`rejected`/`cancelled`); task is not `open`/`claimed`; policy version is not `draft` for editing; delivery has already succeeded.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Request is in terminal state 'approved' \u2014 cannot cancel"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -355,6 +709,90 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Policy body violates a structural rule (e.g. URL/body key mismatch).",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-010",
+                      "message": "policy_key in body must match URL"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching policy / policy version exists.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-001",
+                      "message": "Policy 'registry.cr.v1' not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -415,6 +853,69 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching policy / policy version exists.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-001",
+                      "message": "Policy 'registry.cr.v1' not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -467,6 +968,90 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching policy / policy version exists.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-001",
+                      "message": "Policy 'registry.cr.v1' not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource is in a state that disallows this transition. Examples: request is already in a terminal state (`approved`/`rejected`/`cancelled`); task is not `open`/`claimed`; policy version is not `draft` for editing; delivery has already succeeded.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Request is in terminal state 'approved' \u2014 cannot cancel"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -537,6 +1122,90 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching policy / policy version exists.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-001",
+                      "message": "Policy 'registry.cr.v1' not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "An approver-resolution rule's upstream call failed (Keycloak admin API, HTTP resolver, etc.).",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Keycloak role lookup failed: connection timed out"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -597,6 +1266,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CreateRequestOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Engine refused to start the request (e.g. malformed context).",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Engine could not start request"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Policy key has no version in `active` status \u2014 no flow can be started for it.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-001",
+                      "message": "No active policy for 'registry.cr.v1'"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -701,6 +1433,27 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -744,6 +1497,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RequestOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No approval request with the given id.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-003",
+                      "message": "Request not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -805,6 +1600,90 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No approval request with the given id.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-003",
+                      "message": "Request not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource is in a state that disallows this transition. Examples: request is already in a terminal state (`approved`/`rejected`/`cancelled`); task is not `open`/`claimed`; policy version is not `draft` for editing; delivery has already succeeded.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Request is in terminal state 'approved' \u2014 cannot cancel"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -852,6 +1731,27 @@
                     "$ref": "#/components/schemas/EventOut"
                   },
                   "title": "Response Request Events V1 Awe Requests  Request Id  Events Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -961,6 +1861,27 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1004,6 +1925,90 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Task is not assigned to the caller and the caller is not an admin.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Task is not assigned to you"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No task with the given id.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-004",
+                      "message": "Task not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource is in a state that disallows this transition. Examples: request is already in a terminal state (`approved`/`rejected`/`cancelled`); task is not `open`/`claimed`; policy version is not `draft` for editing; delivery has already succeeded.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Request is in terminal state 'approved' \u2014 cannot cancel"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1065,6 +2070,90 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Task is not assigned to the caller and the caller is not an admin.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Task is not assigned to you"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No approval request with the given id.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-003",
+                      "message": "Request not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource is in a state that disallows this transition. Examples: request is already in a terminal state (`approved`/`rejected`/`cancelled`); task is not `open`/`claimed`; policy version is not `draft` for editing; delivery has already succeeded.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Request is in terminal state 'approved' \u2014 cannot cancel"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1118,6 +2207,90 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No approval request with the given id.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-003",
+                      "message": "Request not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource is in a state that disallows this transition. Examples: request is already in a terminal state (`approved`/`rejected`/`cancelled`); task is not `open`/`claimed`; policy version is not `draft` for editing; delivery has already succeeded.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Request is in terminal state 'approved' \u2014 cannot cancel"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1208,6 +2381,48 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1251,6 +2466,90 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeliveryOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No webhook delivery with the given id.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Delivery not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource is in a state that disallows this transition. Examples: request is already in a terminal state (`approved`/`rejected`/`cancelled`); task is not `open`/`claimed`; policy version is not `draft` for editing; delivery has already succeeded.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-007",
+                      "message": "Request is in terminal state 'approved' \u2014 cannot cancel"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1411,6 +2710,48 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1481,6 +2822,48 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1525,6 +2908,48 @@
               }
             }
           },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1564,6 +2989,69 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks the `AWE_ADMIN` role required for this mutation.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No delegation with the given id.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-004",
+                      "message": "Delegation not found"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -2313,6 +3801,58 @@
           "message"
         ],
         "title": "ErrorDetail"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": "openg2p.awe",
+            "examples": [
+              "openg2p.awe"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "1.0",
+            "examples": [
+              "1.0"
+            ]
+          },
+          "responsetime": {
+            "type": "string",
+            "title": "Responsetime",
+            "examples": [
+              "2026-04-23T10:00:00.000Z"
+            ]
+          },
+          "response": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "responsetime",
+          "errors"
+        ],
+        "title": "ErrorResponse"
       },
       "EventOut": {
         "properties": {
