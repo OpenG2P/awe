@@ -23,6 +23,7 @@ from ..schemas.policy import (
     StageOut,
 )
 from ..schemas.request import DecisionOut, EventOut, RequestOut, TaskOut
+from ..services.task_search import build_task_search_text
 
 
 def policy_to_out(policy: ApprovalPolicy) -> PolicyOut:
@@ -136,7 +137,7 @@ def task_to_out(
         artifact_type=request.artifact_type if request else None,
         artifact_id=request.artifact_id if request else None,
         policy_key=request.policy_key if request else None,
-        search_text=task.search_text,
+        search_text=build_task_search_text(request) if request else task.search_text,
     )
 
 

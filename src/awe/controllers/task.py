@@ -13,7 +13,7 @@ from typing import Optional
 import math
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -121,14 +121,19 @@ async def list_tasks(
         task_filters.append(ApprovalTask.status == status_filter)
 
     request_filters = []
-    needs_request_join = bool(artifact_type or policy_key)
+    needs_request_join = bool(artifact_type or policy_key or search_text)
     if artifact_type:
         request_filters.append(ApprovalRequest.artifact_type == artifact_type)
     if policy_key:
         request_filters.append(ApprovalRequest.policy_key == policy_key)
     if search_text:
         pattern = f"%{search_text.strip()}%"
-        task_filters.append(ApprovalTask.search_text.ilike(pattern))
+        request_filters.append(
+            or_(
+                ApprovalTask.search_text.ilike(pattern),
+                cast(ApprovalRequest.context, String).ilike(pattern),
+            )
+        )
 
     def _apply_request_join(stmt):
         return (

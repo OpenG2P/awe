@@ -142,11 +142,20 @@ async def test_full_two_stage_flow(client, admin_token, service_token) -> None:
         f"/v1/awe/requests/{request_id}/events", headers=auth_header(service_token)
     )
     assert resp.status_code == 200
-    types = [e["event_type"] for e in resp.json()]
+    events = resp.json()
+    types = [e["event_type"] for e in events]
     assert "request_created" in types
     assert "stage_started" in types
     assert "stage_completed" in types
     assert "request_approved" in types
+
+    stage_started_orders = [
+        e["payload"]["stage_order"]
+        for e in events
+        if e["event_type"] == "stage_started"
+    ]
+    assert 1 in stage_started_orders
+    assert 2 in stage_started_orders
 
 
 @pytest.mark.asyncio

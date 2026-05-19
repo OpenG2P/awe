@@ -800,18 +800,24 @@ async def emit_event(
 ) -> ApprovalEvent:
     """Append an event row and, if it's deliverable, queue a webhook attempt."""
     now = utcnow()
+    event_payload = {
+        **payload,
+        "request_id": request.id,
+        "artifact_type": request.artifact_type,
+        "artifact_id": request.artifact_id,
+        "status": request.status,
+    }
+    # Preserve explicit stage_order from callers (e.g. stage_started for the
+    # stage being activated). request.current_stage_order may still reflect the
+    # previous stage until _activate_next_group finishes.
+    if "stage_order" not in event_payload:
+        event_payload["stage_order"] = request.current_stage_order
+
     event = ApprovalEvent(
         id=new_uuid(),
         request_id=request.id,
         event_type=event_type,
-        payload={
-            **payload,
-            "request_id": request.id,
-            "artifact_type": request.artifact_type,
-            "artifact_id": request.artifact_id,
-            "status": request.status,
-            "stage_order": request.current_stage_order,
-        },
+        payload=event_payload,
         created_at=now,
     )
     session.add(event)
