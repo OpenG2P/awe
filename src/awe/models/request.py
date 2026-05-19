@@ -70,6 +70,7 @@ class ApprovalTask(Base, TimestampMixin):
     __table_args__ = (
         Index("idx_task_assignee_status", "assignee", "status"),
         Index("idx_task_request_stage", "request_id", "stage_order"),
+        Index("idx_task_search_text", "search_text"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -101,6 +102,8 @@ class ApprovalTask(Base, TimestampMixin):
     decision_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("approval_decision.id")
     )
+    # Denormalized from the owning request's context for inbox search.
+    search_text: Mapped[Optional[str]] = mapped_column(Text)
 
     request: Mapped["ApprovalRequest"] = relationship(back_populates="tasks")
 

@@ -44,7 +44,15 @@ class TaskOut(BaseModel):
     created_at: datetime
     context: Optional[Dict[str, Any]] = None
     artifact_type: Optional[str] = None
+    artifact_id: Optional[str] = None
     policy_key: Optional[str] = None
+    search_text: Optional[str] = None
+
+
+class TaskStatsOut(BaseModel):
+    total: int
+    change_request_count: int = 0
+    intake_form_count: int = 0
 
 
 class PagedTasksOut(BaseModel):

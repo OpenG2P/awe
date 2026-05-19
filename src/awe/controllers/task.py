@@ -20,13 +20,65 @@ from sqlalchemy.orm import selectinload
 from ..db import get_db
 from ..models import ApprovalDecision, ApprovalRequest, ApprovalTask
 from ..models.base import utcnow
-from ..schemas.request import DecisionIn, DecisionOut, PagedTasksOut, ReassignTaskIn, TaskOut
+from ..schemas.request import (
+    DecisionIn,
+    DecisionOut,
+    PagedTasksOut,
+    ReassignTaskIn,
+    TaskOut,
+    TaskStatsOut,
+)
 from ..services import audit as audit_svc
 from ..services import engine as engine_svc
 from ..services.auth import CallerIdentity, current_identity, require_role
 from ._helpers import decision_to_out, error, task_to_out
 
 router = APIRouter(prefix="/v1/awe/tasks", tags=["tasks"])
+
+REGISTRY_CHANGE_REQUEST_ARTIFACT = "registry.change_request"
+REGISTRY_INTAKE_FORM_ARTIFACT = "registry.intake_form"
+
+
+@router.get(
+    "/stats",
+    response_model=TaskStatsOut,
+    summary="Task counts for the logged-in user, grouped by artifact type",
+)
+async def task_stats(
+    status_filter: Optional[str] = Query(default=None, alias="status"),
+    identity: CallerIdentity = Depends(current_identity),
+    session: AsyncSession = Depends(get_db),
+):
+    task_filters = [ApprovalTask.assignee == identity.subject]
+    if status_filter:
+        task_filters.append(ApprovalTask.status == status_filter)
+
+    count_stmt = (
+        select(
+            ApprovalRequest.artifact_type,
+            func.count(ApprovalTask.id),
+        )
+        .join(ApprovalRequest, ApprovalTask.request_id == ApprovalRequest.id)
+        .where(*task_filters)
+        .group_by(ApprovalRequest.artifact_type)
+    )
+    rows = await session.execute(count_stmt)
+    by_type = {artifact_type: count for artifact_type, count in rows.all()}
+
+    change_request_count = by_type.get(REGISTRY_CHANGE_REQUEST_ARTIFACT, 0)
+    intake_form_count = by_type.get(REGISTRY_INTAKE_FORM_ARTIFACT, 0)
+    other_total = sum(
+        count
+        for artifact_type, count in by_type.items()
+        if artifact_type
+        not in (REGISTRY_CHANGE_REQUEST_ARTIFACT, REGISTRY_INTAKE_FORM_ARTIFACT)
+    )
+
+    return TaskStatsOut(
+        total=change_request_count + intake_form_count + other_total,
+        change_request_count=change_request_count,
+        intake_form_count=intake_form_count,
+    )
 
 
 @router.get(
@@ -47,6 +99,10 @@ async def list_tasks(
     status_filter: Optional[str] = Query(default=None, alias="status"),
     artifact_type: Optional[str] = Query(default=None),
     policy_key: Optional[str] = Query(default=None),
+    search_text: Optional[str] = Query(
+        default=None,
+        description="Case-insensitive substring match against task search_text.",
+    ),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=25, ge=1, le=100),
     identity: CallerIdentity = Depends(current_identity),
@@ -65,10 +121,14 @@ async def list_tasks(
         task_filters.append(ApprovalTask.status == status_filter)
 
     request_filters = []
+    needs_request_join = bool(artifact_type or policy_key)
     if artifact_type:
         request_filters.append(ApprovalRequest.artifact_type == artifact_type)
     if policy_key:
         request_filters.append(ApprovalRequest.policy_key == policy_key)
+    if search_text:
+        pattern = f"%{search_text.strip()}%"
+        task_filters.append(ApprovalTask.search_text.ilike(pattern))
 
     def _apply_request_join(stmt):
         return (
@@ -79,7 +139,7 @@ async def list_tasks(
 
     # Total count (no offset/limit)
     count_stmt = select(func.count(ApprovalTask.id)).where(*task_filters)
-    if request_filters:
+    if needs_request_join:
         count_stmt = _apply_request_join(count_stmt)
     total: int = await session.scalar(count_stmt) or 0
 
@@ -93,7 +153,7 @@ async def list_tasks(
         .offset(offset)
         .limit(page_size)
     )
-    if request_filters:
+    if needs_request_join:
         stmt = _apply_request_join(stmt)
 
     rows = await session.execute(stmt)
