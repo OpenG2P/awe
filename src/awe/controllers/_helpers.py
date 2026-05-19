@@ -134,7 +134,9 @@ def task_to_out(
         created_at=task.created_at,
         context=request.context if request else None,
         artifact_type=request.artifact_type if request else None,
+        artifact_id=request.artifact_id if request else None,
         policy_key=request.policy_key if request else None,
+        search_text=task.search_text,
     )
 
 

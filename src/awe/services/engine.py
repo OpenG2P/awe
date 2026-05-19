@@ -62,6 +62,7 @@ from ..models import (
 )
 from ..models.base import new_uuid, utcnow
 from . import resolver as resolver_svc
+from .task_search import build_task_search_text
 
 logger = logging.getLogger(__name__)
 
@@ -267,6 +268,7 @@ async def reassign_task(
         reassigned_from=old_assignee,
         status="open",
         due_at=task.due_at,
+        search_text=task.search_text or build_task_search_text(request),
     )
     session.add(new_task)
     await session.flush()
@@ -414,6 +416,7 @@ async def _activate_one_stage(
         return "blocked"
 
     due_at = utcnow() + timedelta(hours=stage.sla_hours) if stage.sla_hours else None
+    task_search = build_task_search_text(request)
     for assignee, delegated_from in approver_tasks:
         session.add(
             ApprovalTask(
@@ -425,6 +428,7 @@ async def _activate_one_stage(
                 delegated_from=delegated_from,
                 status="open",
                 due_at=due_at,
+                search_text=task_search,
             )
         )
     for assignee, delegated_from in observer_tasks:
@@ -437,6 +441,7 @@ async def _activate_one_stage(
                 kind="observer",
                 delegated_from=delegated_from,
                 status="open",
+                search_text=task_search,
             )
         )
     await session.flush()
@@ -870,6 +875,7 @@ async def escalate_stage(
         for t in await _stage_tasks(session, request.id, stage.stage_order)
         if t.status in ("open", "claimed")
     }
+    task_search = build_task_search_text(request)
     created = 0
     for assignee, delegated_from in assignee_pairs:
         if assignee in existing:
@@ -884,6 +890,7 @@ async def escalate_stage(
                 delegated_from=delegated_from,
                 status="open",
                 due_at=due_at,
+                search_text=task_search,
             )
         )
         created += 1

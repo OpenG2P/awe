@@ -93,6 +93,11 @@ export const api = {
     request<ApprovalRequestOut>(`/requests/${encodeURIComponent(id)}`),
   getRequestEvents: (id: string) =>
     request<ApprovalEvent[]>(`/requests/${encodeURIComponent(id)}/events`),
+  taskStats: (params: { status?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.append("status", params.status);
+    return request<TaskStatsOut>(`/tasks/stats?${qs}`);
+  },
   listTasks: (params: Partial<TaskQuery> = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(
@@ -299,7 +304,15 @@ export interface TaskOut {
   created_at: string;
   context?: Record<string, unknown> | null;
   artifact_type?: string | null;
+  artifact_id?: string | null;
   policy_key?: string | null;
+  search_text?: string | null;
+}
+
+export interface TaskStatsOut {
+  total: number;
+  change_request_count: number;
+  intake_form_count: number;
 }
 
 export interface PagedTasksOut {
@@ -316,6 +329,7 @@ export interface TaskQuery {
   status: string;
   artifact_type: string;
   policy_key: string;
+  search_text: string;
   page: number;
   page_size: number;
 }
