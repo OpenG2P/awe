@@ -869,6 +869,60 @@
         }
       }
     },
+    "/v1/awe/tasks/stats": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Task counts for the logged-in user, grouped by artifact type",
+        "operationId": "task_stats_v1_awe_tasks_stats_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/awe/tasks": {
       "get": {
         "tags": [
@@ -964,6 +1018,24 @@
               ],
               "title": "Policy Key"
             }
+          },
+          {
+            "name": "search_text",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring match against task search_text.",
+              "title": "Search Text"
+            },
+            "description": "Case-insensitive substring match against task search_text."
           },
           {
             "name": "page",
@@ -3289,6 +3361,17 @@
             ],
             "title": "Artifact Type"
           },
+          "artifact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Id"
+          },
           "policy_key": {
             "anyOf": [
               {
@@ -3299,6 +3382,17 @@
               }
             ],
             "title": "Policy Key"
+          },
+          "search_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Text"
           }
         },
         "type": "object",
@@ -3312,6 +3406,29 @@
           "created_at"
         ],
         "title": "TaskOut"
+      },
+      "TaskStatsOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "change_request_count": {
+            "type": "integer",
+            "title": "Change Request Count",
+            "default": 0
+          },
+          "intake_form_count": {
+            "type": "integer",
+            "title": "Intake Form Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "total"
+        ],
+        "title": "TaskStatsOut"
       },
       "ValidationError": {
         "properties": {
