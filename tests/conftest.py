@@ -82,7 +82,7 @@ async def user_token() -> str:
     from jose import jwt
 
     return jwt.encode(
-        {"sub": "u-alice", "realm_access": {"roles": []}, "email": "alice@test"},
+        {"sub": "u-alice", "preferred_username": "u-alice", "realm_access": {"roles": []}, "email": "alice@test"},
         "secret",
         algorithm="HS256",
     )

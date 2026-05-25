@@ -5,8 +5,9 @@ Two flavours of caller:
   * **Service-to-service** (Caller Svc → AWE) — JWT bearer obtained via
     client_credentials. Validated against the Keycloak JWKS; we just need
     a valid signature + audience.
-  * **End-user** (approver via Caller UI proxy) — JWT bearer with `sub`
-    claim used as the assignee id, plus realm roles for admin gating.
+  * **End-user** (approver via Caller UI proxy) — JWT bearer; task
+    assignee matching uses `preferred_username`, then `username`, then `sub`.
+    The raw `sub` is retained on `CallerIdentity.subject` for audit etc.
 
 Validation is best-effort: if `keycloak.issuer` is unset (dev mode), we trust
 the bearer's `sub` claim without signature verification — useful for the
@@ -27,6 +28,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from ..config import get_settings
+from .assignee_id import assignee_id_from_claims
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,8 @@ class CallerIdentity:
     """The authenticated caller — either a human approver or a service token."""
 
     subject: str
+    # Task assignee key: preferred_username → username → sub.
+    assignee_id: Optional[str]
     roles: List[str]
     is_service_account: bool
     raw_claims: dict
@@ -152,6 +156,7 @@ async def current_identity(
 
     return CallerIdentity(
         subject=sub,
+        assignee_id=assignee_id_from_claims(claims),
         roles=_extract_roles(claims),
         # client_credentials tokens carry `clientId` / `azp` but no human user;
         # treat the absence of `email` as a reasonable proxy.
