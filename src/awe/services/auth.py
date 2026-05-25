@@ -4,7 +4,7 @@ Keycloak OIDC integration.
 Two flavours of caller:
   * **Service-to-service** (Caller Svc → AWE) — JWT bearer obtained via
     client_credentials. Validated against the Keycloak JWKS; we just need
-    a valid signature + audience.
+    a valid signature.
   * **End-user** (approver via Caller UI proxy) — JWT bearer; task
     assignee matching uses `preferred_username`, then `username`, then `sub`.
     The raw `sub` is retained on `CallerIdentity.subject` for audit etc.
@@ -121,8 +121,7 @@ async def _verify_token(token: str) -> dict:
             jwks,
             algorithms=["RS256"],
             issuer=cfg.issuer,
-            audience=cfg.audience or None,
-            options={"verify_aud": bool(cfg.audience)},
+            options={"verify_aud": False},
         )
     except JWTError as e:
         raise HTTPException(
