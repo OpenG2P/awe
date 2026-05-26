@@ -232,9 +232,27 @@ awe:
       adminClientId: '{{ tpl .Values.global.aweAdminResolverClientId $ }}'
       issuer: '{{ tpl .Values.global.keycloakIssuerUrl $ }}'
       jwksUrl: '{{ tpl .Values.global.keycloakIssuerUrl $ }}/protocol/openid-connect/certs'
-      # Audience claim expected on inbound bearers. Matches the admin portal
-      # client id — tokens minted for that client carry `aud: awe-admin-portal`.
-      audience: '{{ tpl .Values.global.aweAdminPortalClientId $ }}'
+      # Audience claim check — DISABLED for v1 (left empty).
+      #
+      # Why: Caller integrations (e.g. Registry) forward an end-user's JWT
+      # to POST /tasks/{id}/decision. That token was minted for the
+      # Caller's own client (e.g. registry-staff-portal), so its `aud` is
+      # the Caller client — NOT awe-admin-portal. If we verified audience,
+      # AWE would 401 every forwarded approver token. With audience empty,
+      # AWE accepts any validly-signed token from the trusted `staff`-realm
+      # issuer (signature + issuer are still enforced).
+      #
+      # Trade-off: weaker than a strict audience pin — any realm token is
+      # accepted. Acceptable for v1 given all clients live in the same
+      # trusted realm.
+      #
+      # To tighten later (Option 1): set this back to the awe client id AND
+      # ensure every Caller's tokens carry `awe` in their audience. That
+      # requires the *Caller's* keycloak-init to emit an extra audience
+      # mapper (or a shared client scope) — keycloak-init currently only
+      # auto-adds each client's self-audience, so it would need enhancing.
+      # See the "Integration with Registry" doc for details.
+      audience: ''
 
     notifier:
       enabled: false
