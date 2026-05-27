@@ -6,9 +6,9 @@ request's context. Stage 2+ rules re-resolve against the same frozen context
 snapshot stored on the request.
 
 Rule types:
-  * `user`       — literal `{"user_id": "u-123"}`
-  * `role`       — Keycloak realm-role member lookup
-  * `group`      — Keycloak group member lookup
+  * `user`       — literal `{"user_id": "<username>"}`
+  * `role`       — Keycloak realm-role member lookup (returns usernames)
+  * `group`      — Keycloak group member lookup (returns usernames)
   * `expression` — JSONLogic over the context, returning nested rule(s)
   * `http`       — POST {context} to caller's resolver endpoint, returns
                    `{"user_ids": [...]}`
@@ -27,12 +27,27 @@ import httpx
 
 from ..config import get_settings
 from ..models import ApproverRule
+from .assignee_id import assignee_id_from_keycloak_user
 
 logger = logging.getLogger(__name__)
 
 
 class ResolutionError(Exception):
     """Raised when a rule cannot be evaluated (network failure, etc.)."""
+
+
+def _keycloak_assignee_id(user: dict) -> str:
+    """Map a Keycloak admin API user record to the task assignee id.
+
+    Same order as JWT resolution: `preferred_username`, `username`, `sub`
+    (Keycloak internal UUID is read from `id` as `sub`).
+    """
+    assignee_id = assignee_id_from_keycloak_user(user)
+    if assignee_id is None:
+        raise ResolutionError(
+            "Keycloak user record missing preferred_username, username, and id"
+        )
+    return assignee_id
 
 
 # Cache by (rule_type, hashable rule_value, context_hash) for the duration of
@@ -141,7 +156,7 @@ async def _resolve_keycloak_role(role: str, client_id: str | None = None) -> Lis
                 url = f"{base}/roles/{role}/users"
             resp = await http_client.get(url, headers=headers, params={"max": 200})
             resp.raise_for_status()
-            return [u["id"] for u in resp.json()]
+            return [_keycloak_assignee_id(u) for u in resp.json()]
     except httpx.HTTPError as e:
         logger.warning(
             "Keycloak role lookup failed for %s (client=%s): %s", role, client_id, e
@@ -171,7 +186,7 @@ async def _resolve_keycloak_group(group_path: str) -> List[str]:
                 params={"max": 200},
             )
             mem.raise_for_status()
-            return [u["id"] for u in mem.json()]
+            return [_keycloak_assignee_id(u) for u in mem.json()]
     except httpx.HTTPError as e:
         logger.warning("Keycloak group lookup failed for %s: %s", group_path, e)
         raise ResolutionError(f"Keycloak group lookup failed: {e}") from e

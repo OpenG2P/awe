@@ -38,7 +38,7 @@ def _two_stage_policy() -> dict:
 
 def _user_token(sub: str) -> str:
     return jwt.encode(
-        {"sub": sub, "realm_access": {"roles": []}, "email": f"{sub}@test"},
+        {"sub": sub, "preferred_username": sub, "realm_access": {"roles": []}, "email": f"{sub}@test"},
         "secret",
         algorithm="HS256",
     )
@@ -96,7 +96,7 @@ async def test_full_two_stage_flow(client, admin_token, service_token) -> None:
         "/v1/awe/tasks", headers=auth_header(_user_token("u-alice"))
     )
     assert resp.status_code == 200
-    alice_tasks = [t for t in resp.json() if t["request_id"] == request_id]
+    alice_tasks = [t for t in resp.json()["items"] if t["request_id"] == request_id]
     assert len(alice_tasks) == 1
     alice_task_id = alice_tasks[0]["id"]
 
@@ -118,7 +118,7 @@ async def test_full_two_stage_flow(client, admin_token, service_token) -> None:
         "/v1/awe/tasks", headers=auth_header(_user_token("u-director"))
     )
     assert resp.status_code == 200
-    director_tasks = [t for t in resp.json() if t["request_id"] == request_id]
+    director_tasks = [t for t in resp.json()["items"] if t["request_id"] == request_id]
     assert len(director_tasks) == 1
     director_task_id = director_tasks[0]["id"]
 
@@ -142,11 +142,20 @@ async def test_full_two_stage_flow(client, admin_token, service_token) -> None:
         f"/v1/awe/requests/{request_id}/events", headers=auth_header(service_token)
     )
     assert resp.status_code == 200
-    types = [e["event_type"] for e in resp.json()]
+    events = resp.json()
+    types = [e["event_type"] for e in events]
     assert "request_created" in types
     assert "stage_started" in types
     assert "stage_completed" in types
     assert "request_approved" in types
+
+    stage_started_orders = [
+        e["payload"]["stage_order"]
+        for e in events
+        if e["event_type"] == "stage_started"
+    ]
+    assert 1 in stage_started_orders
+    assert 2 in stage_started_orders
 
 
 @pytest.mark.asyncio
@@ -174,7 +183,7 @@ async def test_reject_terminates_request(client, admin_token, service_token) -> 
     # Alice rejects (any-1 + reject = stage rejected → request rejected)
     resp = await client.get("/v1/awe/tasks", headers=auth_header(_user_token("u-alice")))
     alice_task_id = next(
-        t["id"] for t in resp.json() if t["request_id"] == request_id
+        t["id"] for t in resp.json()["items"] if t["request_id"] == request_id
     )
     resp = await client.post(
         f"/v1/awe/tasks/{alice_task_id}/decision",
@@ -193,7 +202,7 @@ async def test_reject_terminates_request(client, admin_token, service_token) -> 
             "/v1/awe/tasks", headers=auth_header(_user_token("u-bob"))
         )
         bob_task_id = next(
-            t["id"] for t in resp.json() if t["request_id"] == request_id
+            t["id"] for t in resp.json()["items"] if t["request_id"] == request_id
         )
         await client.post(
             f"/v1/awe/tasks/{bob_task_id}/decision",
