@@ -39,7 +39,28 @@ class TaskOut(BaseModel):
     completed_at: Optional[datetime] = None
     due_at: Optional[datetime] = None
     decision_id: Optional[str] = None
+    decision_action: Optional[str] = None
+    decision_comment: Optional[str] = None
     created_at: datetime
+    context: Optional[Dict[str, Any]] = None
+    artifact_type: Optional[str] = None
+    artifact_id: Optional[str] = None
+    policy_key: Optional[str] = None
+    search_text: Optional[str] = None
+
+
+class TaskStatsOut(BaseModel):
+    total: int
+    change_request_count: int = 0
+    intake_form_count: int = 0
+
+
+class PagedTasksOut(BaseModel):
+    items: List[TaskOut]
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 
 class ReassignTaskIn(BaseModel):

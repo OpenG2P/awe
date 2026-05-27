@@ -86,15 +86,20 @@ async def deliver_one(
         delivery.last_error = "request row missing"
         return False
 
+    event_payload = event_row.payload if isinstance(event_row.payload, dict) else {}
+    stage_order = event_payload.get("stage_order")
+    if stage_order is None:
+        stage_order = request_row.current_stage_order
+
     body = WebhookEvent(
         event_id=event_row.id,
         event_type=event_row.event_type,
         request_id=request_row.id,
         artifact_type=request_row.artifact_type,
         artifact_id=request_row.artifact_id,
-        status=request_row.status,
-        stage_order=request_row.current_stage_order,
-        actor=event_row.payload.get("actor") if isinstance(event_row.payload, dict) else None,
+        status=event_payload.get("status", request_row.status),
+        stage_order=stage_order,
+        actor=event_payload.get("actor"),
         occurred_at=event_row.created_at,
     ).model_dump(mode="json")
 

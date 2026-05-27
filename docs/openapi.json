@@ -1769,12 +1769,66 @@
         }
       }
     },
+    "/v1/awe/tasks/stats": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Task counts for the logged-in user, grouped by artifact type",
+        "operationId": "task_stats_v1_awe_tasks_stats_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/awe/tasks": {
       "get": {
         "tags": [
           "tasks"
         ],
-        "summary": "List tasks \u2014 by assignee (default = me) and/or by request_id",
+        "summary": "List tasks \u2014 paginated, by assignee (default = me) and/or by request_id",
         "operationId": "list_tasks_v1_awe_tasks_get",
         "security": [
           {
@@ -1795,11 +1849,11 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by assignee. Default `me` resolves to the token's `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page.",
+              "description": "Filter by assignee. Default `me` resolves to `preferred_username`, then `username`, then `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page.",
               "default": "me",
               "title": "Assignee"
             },
-            "description": "Filter by assignee. Default `me` resolves to the token's `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page."
+            "description": "Filter by assignee. Default `me` resolves to `preferred_username`, then `username`, then `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page."
           },
           {
             "name": "request_id",
@@ -1834,15 +1888,76 @@
             }
           },
           {
-            "name": "limit",
+            "name": "artifact_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Artifact Type"
+            }
+          },
+          {
+            "name": "policy_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Policy Key"
+            }
+          },
+          {
+            "name": "search_text",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring match against task search_text.",
+              "title": "Search Text"
+            },
+            "description": "Case-insensitive substring match against task search_text."
+          },
+          {
+            "name": "page",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 500,
               "minimum": 1,
-              "default": 100,
-              "title": "Limit"
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
             }
           }
         ],
@@ -1852,11 +1967,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TaskOut"
-                  },
-                  "title": "Response List Tasks V1 Awe Tasks Get"
+                  "$ref": "#/components/schemas/PagedTasksOut"
                 }
               }
             }
@@ -3961,6 +4072,42 @@
         ],
         "title": "HealthResponse"
       },
+      "PagedTasksOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "pages"
+        ],
+        "title": "PagedTasksOut"
+      },
       "PolicyCreate": {
         "properties": {
           "policy_key": {
@@ -4704,10 +4851,88 @@
             ],
             "title": "Decision Id"
           },
+          "decision_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Action"
+          },
+          "decision_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Comment"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "artifact_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Type"
+          },
+          "artifact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Id"
+          },
+          "policy_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Key"
+          },
+          "search_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Text"
           }
         },
         "type": "object",
@@ -4721,6 +4946,29 @@
           "created_at"
         ],
         "title": "TaskOut"
+      },
+      "TaskStatsOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "change_request_count": {
+            "type": "integer",
+            "title": "Change Request Count",
+            "default": 0
+          },
+          "intake_form_count": {
+            "type": "integer",
+            "title": "Intake Form Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "total"
+        ],
+        "title": "TaskStatsOut"
       },
       "ValidationError": {
         "properties": {

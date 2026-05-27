@@ -22,7 +22,7 @@ from .conftest import auth_header
 
 def _user_token(sub: str) -> str:
     return jwt.encode(
-        {"sub": sub, "realm_access": {"roles": []}, "email": f"{sub}@test"},
+        {"sub": sub, "preferred_username": sub, "realm_access": {"roles": []}, "email": f"{sub}@test"},
         "secret",
         algorithm="HS256",
     )
@@ -98,11 +98,12 @@ async def test_parallel_stages_need_both_before_advancing(
         "/v1/awe/tasks?assignee=*&request_id=" + request_id,
         headers=auth_header(service_token),
     )
-    assignees = {t["assignee"] for t in resp.json()}
+    tasks = resp.json()["items"]
+    assignees = {t["assignee"] for t in tasks}
     assert {"u-legal", "u-fin"}.issubset(assignees)
 
     # Legal approves — finance still pending, so no director task yet.
-    legal_task = next(t for t in resp.json() if t["assignee"] == "u-legal")
+    legal_task = next(t for t in tasks if t["assignee"] == "u-legal")
     await client.post(
         f"/v1/awe/tasks/{legal_task['id']}/decision",
         json={"action": "approve"},
@@ -113,10 +114,10 @@ async def test_parallel_stages_need_both_before_advancing(
         headers=auth_header(service_token),
     )
     # Director not yet assigned.
-    assert "u-dir" not in {t["assignee"] for t in resp2.json()}
+    assert "u-dir" not in {t["assignee"] for t in resp2.json()["items"]}
 
     # Finance approves — group completes, director task arrives.
-    fin_task = next(t for t in resp.json() if t["assignee"] == "u-fin")
+    fin_task = next(t for t in tasks if t["assignee"] == "u-fin")
     await client.post(
         f"/v1/awe/tasks/{fin_task['id']}/decision",
         json={"action": "approve"},
@@ -126,7 +127,7 @@ async def test_parallel_stages_need_both_before_advancing(
         "/v1/awe/tasks?assignee=*&request_id=" + request_id,
         headers=auth_header(service_token),
     )
-    assert "u-dir" in {t["assignee"] for t in resp3.json()}
+    assert "u-dir" in {t["assignee"] for t in resp3.json()["items"]}
 
 
 @pytest.mark.asyncio
@@ -226,7 +227,7 @@ async def test_repeat_approver_filtered_from_later_stage(
         "/v1/awe/tasks?assignee=*&request_id=" + request_id,
         headers=auth_header(service_token),
     )
-    stage2 = [t for t in resp.json() if t["stage_order"] == 2]
+    stage2 = [t for t in resp.json()["items"] if t["stage_order"] == 2]
     assert {t["assignee"] for t in stage2} == {"u-bob"}
 
 

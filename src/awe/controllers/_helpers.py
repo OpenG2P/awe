@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from fastapi.responses import JSONResponse
 
@@ -23,6 +23,7 @@ from ..schemas.policy import (
     StageOut,
 )
 from ..schemas.request import DecisionOut, EventOut, RequestOut, TaskOut
+from ..services.task_search import build_task_search_text
 
 
 def policy_to_out(policy: ApprovalPolicy) -> PolicyOut:
@@ -110,7 +111,11 @@ def request_to_out(req: ApprovalRequest) -> RequestOut:
     )
 
 
-def task_to_out(task: ApprovalTask) -> TaskOut:
+def task_to_out(
+    task: ApprovalTask,
+    request: Optional[ApprovalRequest] = None,
+    decision: Optional[ApprovalDecision] = None,
+) -> TaskOut:
     return TaskOut(
         id=task.id,
         request_id=task.request_id,
@@ -125,7 +130,14 @@ def task_to_out(task: ApprovalTask) -> TaskOut:
         completed_at=task.completed_at,
         due_at=task.due_at,
         decision_id=task.decision_id,
+        decision_action=decision.action if decision else None,
+        decision_comment=decision.comment if decision else None,
         created_at=task.created_at,
+        context=request.context if request else None,
+        artifact_type=request.artifact_type if request else None,
+        artifact_id=request.artifact_id if request else None,
+        policy_key=request.policy_key if request else None,
+        search_text=build_task_search_text(request) if request else task.search_text,
     )
 
 
