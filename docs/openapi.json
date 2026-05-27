@@ -949,11 +949,11 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by assignee. Default `me` resolves to the token's `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page.",
+              "description": "Filter by assignee. Default `me` resolves to `preferred_username`, then `username`, then `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page.",
               "default": "me",
               "title": "Assignee"
             },
-            "description": "Filter by assignee. Default `me` resolves to the token's `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page."
+            "description": "Filter by assignee. Default `me` resolves to `preferred_username`, then `username`, then `sub`. Pass `*` (or any non-`me` value) plus `request_id` to enumerate all tasks for a given request \u2014 used by the admin Request Detail page."
           },
           {
             "name": "request_id",
