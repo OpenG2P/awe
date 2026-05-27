@@ -113,7 +113,7 @@ class ApproverRule(Base, TimestampMixin):
 
     rule_type ∈ user | role | group | expression | http
     rule_value holds the type-specific payload:
-      * user         → {"user_id": "u-123"}
+      * user         → {"user_id": "<username>"}
       * role         → {"role": "PROGRAM_MANAGER"[, "client": "registry-staff-portal"]}
                        `client` optional — omit for a realm role, set to a
                        clientId to resolve a client role (e.g. roles defined

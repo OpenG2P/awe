@@ -1,18 +1,19 @@
 """
 Approver task endpoints — invoked by the Caller Svc on behalf of end users.
 
-The bearer token's `sub` claim is treated as the assignee id. Approvers can
-only act on tasks assigned to them; the policy editor can override that via a
-`AWE_ADMIN` role token (intentional escape hatch for ops).
+Task assignee matching uses `preferred_username`, then `username`, then `sub`.
+Approvers can only act on tasks assigned to them; the policy editor can
+override that via a `AWE_ADMIN` role token (intentional escape hatch for ops).
 """
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Union
 
 import math
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -39,6 +40,16 @@ REGISTRY_CHANGE_REQUEST_ARTIFACT = "registry.change_request"
 REGISTRY_INTAKE_FORM_ARTIFACT = "registry.intake_form"
 
 
+def _require_assignee_id(identity: CallerIdentity) -> Union[str, JSONResponse]:
+    if not identity.assignee_id:
+        return error(
+            401,
+            "AWE-001",
+            "Token missing assignee claim (`preferred_username`, `username`, or `sub`)",
+        )
+    return identity.assignee_id
+
+
 @router.get(
     "/stats",
     response_model=TaskStatsOut,
@@ -49,7 +60,11 @@ async def task_stats(
     identity: CallerIdentity = Depends(current_identity),
     session: AsyncSession = Depends(get_db),
 ):
-    task_filters = [ApprovalTask.assignee == identity.subject]
+    assignee_id = _require_assignee_id(identity)
+    if isinstance(assignee_id, JSONResponse):
+        return assignee_id
+
+    task_filters = [ApprovalTask.assignee == assignee_id]
     if status_filter:
         task_filters.append(ApprovalTask.status == status_filter)
 
@@ -90,7 +105,8 @@ async def list_tasks(
     assignee: Optional[str] = Query(
         default="me",
         description=(
-            "Filter by assignee. Default `me` resolves to the token's `sub`. "
+            "Filter by assignee. Default `me` resolves to `preferred_username`, "
+            "then `username`, then `sub`. "
             "Pass `*` (or any non-`me` value) plus `request_id` to enumerate "
             "all tasks for a given request — used by the admin Request Detail page."
         ),
@@ -112,7 +128,10 @@ async def list_tasks(
     # can be applied to both the COUNT and the data query without duplication.
     task_filters = []
     if assignee == "me":
-        task_filters.append(ApprovalTask.assignee == identity.subject)
+        me = _require_assignee_id(identity)
+        if isinstance(me, JSONResponse):
+            return me
+        task_filters.append(ApprovalTask.assignee == me)
     elif assignee and assignee != "*":
         task_filters.append(ApprovalTask.assignee == assignee)
     if request_id:
@@ -197,7 +216,7 @@ async def claim_task(
     task = await session.get(ApprovalTask, task_id)
     if task is None:
         return error(404, "AWE-004", f"Task {task_id} not found")
-    if task.assignee != identity.subject and "AWE_ADMIN" not in identity.roles:
+    if task.assignee != identity.assignee_id and "AWE_ADMIN" not in identity.roles:
         return error(403, "AWE-008", "Task is not assigned to you")
     if task.status != "open":
         return error(409, "AWE-007", f"Task is in '{task.status}' state — cannot claim")
@@ -222,7 +241,7 @@ async def decide(
     task = await session.get(ApprovalTask, task_id)
     if task is None:
         return error(404, "AWE-004", f"Task {task_id} not found")
-    if task.assignee != identity.subject and "AWE_ADMIN" not in identity.roles:
+    if task.assignee != identity.assignee_id and "AWE_ADMIN" not in identity.roles:
         return error(403, "AWE-008", "Task is not assigned to you")
     if task.status not in ("open", "claimed"):
         return error(409, "AWE-007", f"Task is in '{task.status}' state — cannot decide")

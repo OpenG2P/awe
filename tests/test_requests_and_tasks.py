@@ -38,7 +38,7 @@ def _two_stage_policy() -> dict:
 
 def _user_token(sub: str) -> str:
     return jwt.encode(
-        {"sub": sub, "realm_access": {"roles": []}, "email": f"{sub}@test"},
+        {"sub": sub, "preferred_username": sub, "realm_access": {"roles": []}, "email": f"{sub}@test"},
         "secret",
         algorithm="HS256",
     )
