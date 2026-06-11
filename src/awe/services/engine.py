@@ -516,9 +516,11 @@ def _evaluate_quorum(
     approves = decision_counts.get("approve", 0)
     rejects = decision_counts.get("reject", 0)
 
+    # Any reject is a veto — stage (and request) terminates immediately.
+    if rejects > 0:
+        return "rejected"
+
     if stage.mode == "all":
-        if rejects > 0:
-            return "rejected"
         if approves == total:
             return "approved"
         return "open"

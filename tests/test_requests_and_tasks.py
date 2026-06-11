@@ -180,7 +180,7 @@ async def test_reject_terminates_request(client, admin_token, service_token) -> 
     )
     request_id = resp.json()["request_id"]
 
-    # Alice rejects (any-1 + reject = stage rejected → request rejected)
+    # Alice rejects — any reject vetoes the stage and terminates the request.
     resp = await client.get("/v1/awe/tasks", headers=auth_header(_user_token("u-alice")))
     alice_task_id = next(
         t["id"] for t in resp.json()["items"] if t["request_id"] == request_id
@@ -195,24 +195,6 @@ async def test_reject_terminates_request(client, admin_token, service_token) -> 
     resp = await client.get(
         f"/v1/awe/requests/{request_id}", headers=auth_header(service_token)
     )
-    # any-1: alice rejected, bob still open → not yet rejected (capacity remains).
-    # Force bob to also reject so the whole stage tips.
-    if resp.json()["status"] == "in_review":
-        resp = await client.get(
-            "/v1/awe/tasks", headers=auth_header(_user_token("u-bob"))
-        )
-        bob_task_id = next(
-            t["id"] for t in resp.json()["items"] if t["request_id"] == request_id
-        )
-        await client.post(
-            f"/v1/awe/tasks/{bob_task_id}/decision",
-            json={"action": "reject"},
-            headers=auth_header(_user_token("u-bob")),
-        )
-        resp = await client.get(
-            f"/v1/awe/requests/{request_id}", headers=auth_header(service_token)
-        )
-
     assert resp.json()["status"] == "rejected"
 
 
