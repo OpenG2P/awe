@@ -85,7 +85,7 @@ export default function DelegationsPage() {
               <input
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
-                placeholder="Keycloak user id, e.g. u-alice"
+                placeholder="Keycloak username, e.g. alex.carter"
               />
             </label>
             <label>
@@ -93,7 +93,7 @@ export default function DelegationsPage() {
               <input
                 value={delegateTo}
                 onChange={(e) => setDelegateTo(e.target.value)}
-                placeholder="e.g. u-bob"
+                placeholder="Keycloak username, e.g. jane.smith"
               />
             </label>
           </div>
