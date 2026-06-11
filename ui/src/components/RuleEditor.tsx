@@ -100,7 +100,7 @@ function renderValueEditor(
         <input
           value={String(rule.rule_value.user_id ?? "")}
           onChange={(e) => setField("user_id", e.target.value)}
-          placeholder="Keycloak user id, e.g. u-alice"
+          placeholder="Keycloak username, e.g. alex.carter"
         />
       );
     case "role":
