@@ -59,10 +59,11 @@ class ApprovalStage(Base, TimestampMixin):
     """One ordered stage inside a policy.
 
     Modes:
-      * `all` — every approver must approve; any reject → stage rejected.
+      * `all` — every approver must approve.
       * `any-N` — first N approvals complete the stage.
       * `quorum:N` — alias for any-N (kept for readability).
       * `percentage:P` — need ceil(P/100 * approvers) approvals.
+      Any mode: a single reject vetoes the stage.
     """
 
     __tablename__ = "approval_stage"
