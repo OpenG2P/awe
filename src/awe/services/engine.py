@@ -114,7 +114,7 @@ async def start_request(
     if not stages:
         request.status = "approved"
         request.completed_at = utcnow()
-        await emit_event(session, request, "request_approved", {})
+        await emit_event(session, request, "request_approved", {"actor": requester})
         return request
 
     await _activate_next_group(
@@ -354,9 +354,10 @@ async def _activate_next_group(
     # Fell off the end — every remaining stage was skipped.
     request.status = "approved"
     request.completed_at = utcnow()
-    await emit_event(
-        session, request, "request_approved", {"reason": "all_stages_skipped"}
-    )
+    payload: dict = {"reason": "all_stages_skipped"}
+    if actor:
+        payload["actor"] = actor
+    await emit_event(session, request, "request_approved", payload)
 
 
 async def _activate_one_stage(
