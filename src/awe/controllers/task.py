@@ -272,11 +272,13 @@ async def decide(
     if request is None:
         return error(404, "AWE-003", "Owning request not found (data inconsistency)")
 
+    decision_actor = identity.name or identity.subject
+
     decision = ApprovalDecision(
         request_id=request.id,
         task_id=task.id,
         stage_order=task.stage_order,
-        actor=identity.subject,
+        actor=decision_actor,
         action=payload.action,
         comment=payload.comment,
         attachments_ref=payload.attachments_ref,
@@ -290,7 +292,7 @@ async def decide(
             session=session,
             request=request,
             task=task,
-            actor=identity.subject,
+            actor=decision_actor,
             action=payload.action,
         )
     except engine_svc.EngineError as e:
