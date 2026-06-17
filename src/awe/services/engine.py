@@ -177,7 +177,7 @@ async def apply_decision(
         session,
         request,
         "stage_completed",
-        {"stage_order": stage.stage_order, "outcome": "approved"},
+        {"stage_order": stage.stage_order, "outcome": "approved", "actor": actor},
     )
 
     # Parallel-group completion check: are all stages in this group done?
