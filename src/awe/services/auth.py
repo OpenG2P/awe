@@ -42,6 +42,8 @@ class CallerIdentity:
     subject: str
     # Task assignee key: preferred_username → username → sub.
     assignee_id: Optional[str]
+    # JWT `name` claim (display name); used for decision/webhook actor to Registry.
+    name: Optional[str]
     roles: List[str]
     is_service_account: bool
     raw_claims: dict
@@ -153,9 +155,17 @@ async def current_identity(
             detail="Token missing `sub` claim",
         )
 
+    name_claim = claims.get("name")
+    name = (
+        str(name_claim).strip()
+        if name_claim is not None and str(name_claim).strip()
+        else None
+    )
+
     return CallerIdentity(
         subject=sub,
         assignee_id=assignee_id_from_claims(claims),
+        name=name,
         roles=_extract_roles(claims),
         # client_credentials tokens carry `clientId` / `azp` but no human user;
         # treat the absence of `email` as a reasonable proxy.
