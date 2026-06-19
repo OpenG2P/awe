@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -50,9 +51,16 @@ def is_startup_complete() -> bool:
     return _startup_complete
 
 
+def _test_mode_enabled() -> bool:
+    return os.environ.get("AWE_TEST_MODE", "").lower() in ("1", "true", "yes")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _startup_complete, _webhook_task, _sla_task
+
+    # Ensure a clean engine when the test suite re-enters lifespan per test case.
+    await dispose_engine()
 
     logger.info("Initialising database engine...")
     engine = init_engine()
@@ -60,13 +68,18 @@ async def lifespan(app: FastAPI):
     logger.info("Ensuring AWE schema...")
     await create_schema(engine)
 
-    logger.info("Starting webhook dispatcher loop...")
-    _webhook_task = asyncio.create_task(
-        webhook_dispatcher_loop(engine), name="awe-webhook-dispatcher"
-    )
+    if _test_mode_enabled():
+        logger.info("Test mode — skipping background workers.")
+        _webhook_task = None
+        _sla_task = None
+    else:
+        logger.info("Starting webhook dispatcher loop...")
+        _webhook_task = asyncio.create_task(
+            webhook_dispatcher_loop(engine), name="awe-webhook-dispatcher"
+        )
 
-    logger.info("Starting SLA monitor loop...")
-    _sla_task = asyncio.create_task(sla_monitor_loop(engine), name="awe-sla-monitor")
+        logger.info("Starting SLA monitor loop...")
+        _sla_task = asyncio.create_task(sla_monitor_loop(engine), name="awe-sla-monitor")
 
     _startup_complete = True
     logger.info("Startup complete. /health will now return 200.")

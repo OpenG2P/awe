@@ -28,6 +28,7 @@ import httpx
 from ..config import get_settings
 from ..models import ApproverRule
 from .assignee_id import assignee_id_from_keycloak_user
+from .keycloak_admin import KeycloakAdminError, keycloak_admin_token
 
 logger = logging.getLogger(__name__)
 
@@ -105,26 +106,6 @@ async def _resolve_one(
 # ---------------------------------------------------------------------------
 # Keycloak admin lookups
 # ---------------------------------------------------------------------------
-async def _keycloak_admin_token() -> str:
-    cfg = get_settings().awe.keycloak
-    if not cfg.base_url:
-        raise ResolutionError("Keycloak base_url not configured")
-    token_url = (
-        f"{cfg.base_url.rstrip('/')}/realms/{cfg.realm}/protocol/openid-connect/token"
-    )
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        resp = await client.post(
-            token_url,
-            data={
-                "grant_type": "client_credentials",
-                "client_id": cfg.admin_client_id,
-                "client_secret": cfg.admin_client_secret,
-            },
-        )
-        resp.raise_for_status()
-        return resp.json()["access_token"]
-
-
 async def _resolve_keycloak_role(role: str, client_id: str | None = None) -> List[str]:
     """List users with `role` — realm role if `client_id` is None, else that client's role.
 
@@ -134,7 +115,7 @@ async def _resolve_keycloak_role(role: str, client_id: str | None = None) -> Lis
     """
     cfg = get_settings().awe.keycloak
     try:
-        token = await _keycloak_admin_token()
+        token = await keycloak_admin_token()
         base = f"{cfg.base_url.rstrip('/')}/admin/realms/{cfg.realm}"
         headers = {"Authorization": f"Bearer {token}"}
         async with httpx.AsyncClient(timeout=5.0) as http_client:
@@ -157,6 +138,8 @@ async def _resolve_keycloak_role(role: str, client_id: str | None = None) -> Lis
             resp = await http_client.get(url, headers=headers, params={"max": 200})
             resp.raise_for_status()
             return [_keycloak_assignee_id(u) for u in resp.json()]
+    except KeycloakAdminError as e:
+        raise ResolutionError(str(e)) from e
     except httpx.HTTPError as e:
         logger.warning(
             "Keycloak role lookup failed for %s (client=%s): %s", role, client_id, e
@@ -167,7 +150,7 @@ async def _resolve_keycloak_role(role: str, client_id: str | None = None) -> Lis
 async def _resolve_keycloak_group(group_path: str) -> List[str]:
     cfg = get_settings().awe.keycloak
     try:
-        token = await _keycloak_admin_token()
+        token = await keycloak_admin_token()
         # Resolve the group by path → id, then list members.
         path_url = (
             f"{cfg.base_url.rstrip('/')}/admin/realms/{cfg.realm}"
@@ -187,6 +170,8 @@ async def _resolve_keycloak_group(group_path: str) -> List[str]:
             )
             mem.raise_for_status()
             return [_keycloak_assignee_id(u) for u in mem.json()]
+    except KeycloakAdminError as e:
+        raise ResolutionError(str(e)) from e
     except httpx.HTTPError as e:
         logger.warning("Keycloak group lookup failed for %s: %s", group_path, e)
         raise ResolutionError(f"Keycloak group lookup failed: {e}") from e

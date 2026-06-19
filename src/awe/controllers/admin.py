@@ -20,7 +20,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_db
 from ..models import ApprovalEvent, AuditAction, WebhookDelivery
 from ..models.base import utcnow
-from ..schemas.admin import AuditActionOut, DeliveryOut
+from ..schemas.admin import (
+    AuditActionOut,
+    DeliveryOut,
+    KeycloakClientOut,
+    KeycloakGroupOut,
+    KeycloakRoleOut,
+    KeycloakUserOut,
+)
 from ..schemas.responses import (
     ResponseDeliveryNotFound,
     ResponseForbiddenAdmin,
@@ -29,6 +36,7 @@ from ..schemas.responses import (
     ResponseUnauthorized,
 )
 from ..services import audit as audit_svc
+from ..services import keycloak_admin as keycloak_admin_svc
 from ..services.auth import (
     ROLE_ADMIN,
     ROLE_VIEWER,
@@ -198,3 +206,86 @@ async def list_audit(
         )
         for r in rows.scalars()
     ]
+
+
+@router.get(
+    "/keycloak/users",
+    response_model=list[KeycloakUserOut],
+    summary="Search Keycloak users for policy rule pickers",
+    responses={**ResponseUnauthorized, **ResponseForbiddenViewerOrAdmin},
+)
+async def list_keycloak_users(
+    q: Optional[str] = Query(
+        default=None,
+        description="Optional search string (username, email, first/last name).",
+    ),
+    limit: int = Query(default=100, ge=1, le=200),
+    identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
+):
+    try:
+        users = await keycloak_admin_svc.list_users(q, limit)
+    except keycloak_admin_svc.KeycloakAdminError as e:
+        return error(503, "AWE-011", str(e))
+    return [KeycloakUserOut.model_validate(u) for u in users]
+
+
+@router.get(
+    "/keycloak/clients",
+    response_model=list[KeycloakClientOut],
+    summary="List Keycloak clients for client-role pickers",
+    responses={**ResponseUnauthorized, **ResponseForbiddenViewerOrAdmin},
+)
+async def list_keycloak_clients(
+    limit: int = Query(default=200, ge=1, le=500),
+    identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
+):
+    try:
+        clients = await keycloak_admin_svc.list_clients(limit)
+    except keycloak_admin_svc.KeycloakAdminError as e:
+        return error(503, "AWE-011", str(e))
+    return [KeycloakClientOut.model_validate(c) for c in clients]
+
+
+@router.get(
+    "/keycloak/roles",
+    response_model=list[KeycloakRoleOut],
+    summary="List Keycloak realm or client roles for policy rule pickers",
+    responses={**ResponseUnauthorized, **ResponseForbiddenViewerOrAdmin},
+)
+async def list_keycloak_roles(
+    client: Optional[str] = Query(
+        default=None,
+        description="clientId for client roles; omit for realm roles.",
+    ),
+    q: Optional[str] = Query(
+        default=None,
+        description="Optional filter on role name.",
+    ),
+    identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
+):
+    try:
+        roles = await keycloak_admin_svc.list_roles(client, q)
+    except keycloak_admin_svc.KeycloakAdminError as e:
+        return error(503, "AWE-011", str(e))
+    return [KeycloakRoleOut.model_validate(r) for r in roles]
+
+
+@router.get(
+    "/keycloak/groups",
+    response_model=list[KeycloakGroupOut],
+    summary="Search Keycloak groups for policy rule pickers",
+    responses={**ResponseUnauthorized, **ResponseForbiddenViewerOrAdmin},
+)
+async def list_keycloak_groups(
+    q: Optional[str] = Query(
+        default=None,
+        description="Optional search string (group name or path).",
+    ),
+    limit: int = Query(default=100, ge=1, le=200),
+    identity: CallerIdentity = Depends(require_role_any(ROLE_VIEWER, ROLE_ADMIN)),
+):
+    try:
+        groups = await keycloak_admin_svc.list_groups(q, limit)
+    except keycloak_admin_svc.KeycloakAdminError as e:
+        return error(503, "AWE-011", str(e))
+    return [KeycloakGroupOut.model_validate(g) for g in groups]

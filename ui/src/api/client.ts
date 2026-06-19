@@ -136,6 +136,29 @@ export const api = {
     Object.entries(params).forEach(([k, v]) => v && qs.append(k, String(v)));
     return request<AuditActionOut[]>(`/admin/audit?${qs}`);
   },
+  listKeycloakUsers: (q?: string, limit = 100) => {
+    const qs = new URLSearchParams();
+    if (q?.trim()) qs.append("q", q.trim());
+    qs.append("limit", String(limit));
+    return request<KeycloakUserOut[]>(`/admin/keycloak/users?${qs}`);
+  },
+  listKeycloakClients: (limit = 200) => {
+    const qs = new URLSearchParams();
+    qs.append("limit", String(limit));
+    return request<KeycloakClientOut[]>(`/admin/keycloak/clients?${qs}`);
+  },
+  listKeycloakRoles: (client?: string, q?: string) => {
+    const qs = new URLSearchParams();
+    if (client?.trim()) qs.append("client", client.trim());
+    if (q?.trim()) qs.append("q", q.trim());
+    return request<KeycloakRoleOut[]>(`/admin/keycloak/roles?${qs}`);
+  },
+  listKeycloakGroups: (q?: string, limit = 100) => {
+    const qs = new URLSearchParams();
+    if (q?.trim()) qs.append("q", q.trim());
+    qs.append("limit", String(limit));
+    return request<KeycloakGroupOut[]>(`/admin/keycloak/groups?${qs}`);
+  },
   reassignTask: (taskId: string, newAssignee: string, reason?: string) =>
     request<TaskOut>(`/tasks/${encodeURIComponent(taskId)}/reassign`, {
       method: "POST",
@@ -382,4 +405,27 @@ export interface AuditActionOut {
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;
   metadata?: Record<string, unknown> | null;
+}
+
+export interface KeycloakUserOut {
+  user_id: string;
+  username: string;
+  email?: string | null;
+  name?: string | null;
+}
+
+export interface KeycloakClientOut {
+  client_id: string;
+  name: string;
+}
+
+export interface KeycloakRoleOut {
+  name: string;
+  client?: string | null;
+  description?: string | null;
+}
+
+export interface KeycloakGroupOut {
+  path: string;
+  name: string;
 }
