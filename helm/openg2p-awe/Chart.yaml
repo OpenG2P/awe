@@ -2,7 +2,7 @@ apiVersion: v2
 name: openg2p-awe
 description: A Helm chart for the OpenG2P Approval Workflow Engine
 type: application
-version: 1.0.0-develop
+version: 1.0.0
 dependencies:
 - name: common
   repository: https://openg2p.github.io/openg2p-helm
@@ -12,7 +12,7 @@ dependencies:
   repository: https://openg2p.github.io/openg2p-helm
   condition: postgres-init.enabled
 - name: keycloak-init
-  version: 1.1.0-develop
+  version: 1.1.1
   repository: https://openg2p.github.io/openg2p-helm
   condition: keycloak-init.enabled
 icon: https://openg2p.github.io/openg2p-helm/openg2p-logo.png
