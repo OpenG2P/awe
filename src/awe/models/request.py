@@ -84,6 +84,8 @@ class ApprovalTask(Base, TimestampMixin):
     )
     stage_order: Mapped[int] = mapped_column(Integer, nullable=False)
     assignee: Mapped[str] = mapped_column(String(128), nullable=False)
+    # Human-readable assignee name (Keycloak `name` / first+last); optional.
+    assignee_name: Mapped[Optional[str]] = mapped_column(String(256))
     # `approver` (counts toward stage completion) or `observer` (comment-only).
     kind: Mapped[str] = mapped_column(String(16), nullable=False, default="approver")
     # If this task was created by delegation, the user id the task originally
