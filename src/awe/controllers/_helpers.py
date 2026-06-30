@@ -122,6 +122,7 @@ def task_to_out(
         stage_id=task.stage_id,
         stage_order=task.stage_order,
         assignee=task.assignee,
+        assignee_name=task.assignee_name,
         kind=task.kind,
         delegated_from=task.delegated_from,
         reassigned_from=task.reassigned_from,

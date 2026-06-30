@@ -31,6 +31,7 @@ class TaskOut(BaseModel):
     stage_id: str
     stage_order: int
     assignee: str
+    assignee_name: Optional[str] = None
     kind: str = "approver"
     delegated_from: Optional[str] = None
     reassigned_from: Optional[str] = None

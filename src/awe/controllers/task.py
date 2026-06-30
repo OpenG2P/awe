@@ -39,6 +39,7 @@ from ..schemas.request import (
 )
 from ..services import audit as audit_svc
 from ..services import engine as engine_svc
+from ..services.assignee_id import assignee_display_name_from_claims
 from ..services.auth import CallerIdentity, current_identity, require_role
 from ._helpers import decision_to_out, error, task_to_out
 
@@ -273,6 +274,9 @@ async def decide(
         return error(404, "AWE-003", "Owning request not found (data inconsistency)")
 
     decision_actor = identity.name or identity.subject
+    display_name = identity.name or assignee_display_name_from_claims(identity.raw_claims)
+    if display_name:
+        task.assignee_name = display_name
 
     decision = ApprovalDecision(
         request_id=request.id,

@@ -35,3 +35,26 @@ def assignee_id_from_keycloak_user(user: dict) -> Optional[str]:
     if not normalized.get("sub") and normalized.get("id"):
         normalized["sub"] = normalized["id"]
     return first_assignee_id(normalized)
+
+
+def assignee_display_name_from_keycloak_user(user: dict) -> Optional[str]:
+    """Resolve a human-readable name from a Keycloak Admin API user object."""
+    for key in ("name", "displayName"):
+        value = user.get(key)
+        if value and str(value).strip():
+            return str(value).strip()
+
+    first = str(user.get("firstName") or "").strip()
+    last = str(user.get("lastName") or "").strip()
+    if first or last:
+        return f"{first} {last}".strip()
+
+    return assignee_id_from_keycloak_user(user)
+
+
+def assignee_display_name_from_claims(claims: dict) -> Optional[str]:
+    """Resolve display name from a bearer token."""
+    name = claims.get("name")
+    if name and str(name).strip():
+        return str(name).strip()
+    return assignee_id_from_claims(claims)
