@@ -1,7 +1,7 @@
 {
   "name": "awe-admin-ui",
   "private": true,
-  "version": "develop",
+  "version": "1.1.0",
   "type": "module",
   "description": "OpenG2P Approval Workflow Engine — admin SPA",
   "scripts": {
