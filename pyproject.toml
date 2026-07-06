@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openg2p-awe"
-version = "0.1.0"
+version = "develop"
 description = "OpenG2P Approval Workflow Engine — generic, configurable multi-stage approval service for OpenG2P modules"
 requires-python = ">=3.11"
 dependencies = [
