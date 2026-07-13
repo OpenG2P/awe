@@ -4,7 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openg2p-awe"
-version = "develop"
+# Static PEP 440 placeholder. Do NOT set this to "develop" — Python packaging
+# validates project.version against PEP 440 and "develop" is rejected, which
+# breaks `pip install` and the Dockerfile's `python -m build --wheel`. The real
+# release version is derived from the git ref by openg2p-packaging CI and
+# applied to the Docker image tag + Helm chart, not to this file.
+version = "0.0.0"
 description = "OpenG2P Approval Workflow Engine — generic, configurable multi-stage approval service for OpenG2P modules"
 requires-python = ">=3.11"
 dependencies = [
