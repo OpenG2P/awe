@@ -52,9 +52,22 @@ class KeycloakConfig(BaseModel):
     # Admin client used to look up role/group members for approver resolution.
     admin_client_id: str = "awe-admin-resolver"
     admin_client_secret: str = ""
-    # Issuer URL used to validate inbound bearer tokens.
+    # Issuer URL used to validate inbound bearer tokens — must equal the `iss`
+    # claim on the tokens AWE receives. Keycloak stamps `iss` with the URL the
+    # token was OBTAINED from, so a user who logs in via the public Keycloak
+    # hostname carries the public issuer, while a token minted in-cluster
+    # carries the internal one. AWE validates user tokens forwarded by the
+    # registry, so this is normally the PUBLIC value.
     issuer: str = ""
+    # Extra issuers ALSO accepted (e.g. the in-cluster URL when `issuer` is the
+    # public one, for service-to-service callers). A token validates if its
+    # `iss` matches `issuer` OR any entry here. Empty by default, so leaving it
+    # unset preserves the previous single-issuer behaviour exactly.
+    additional_issuers: List[str] = []
     # JWKS URL — usually `${base_url}/realms/${realm}/protocol/openid-connect/certs`.
+    # This is where AWE FETCHES signing keys, an in-cluster server-to-server
+    # call, so it should point at the internal Keycloak address regardless of
+    # what `issuer` is — it does not need to match the token's `iss`.
     jwks_url: str = ""
     # Required audience claim. Empty disables the audience check (dev only).
     audience: str = ""

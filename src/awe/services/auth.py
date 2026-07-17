@@ -117,12 +117,19 @@ async def _verify_token(token: str) -> dict:
             detail=f"JWKS load failed: {e}",
         ) from e
 
+    # Accept the primary issuer plus any additional ones. Keycloak stamps `iss`
+    # with the URL the token was obtained from, so user tokens (public hostname)
+    # and in-cluster service tokens can legitimately carry different issuers;
+    # python-jose checks membership when given a list. With no additional
+    # issuers configured this is a one-element list, identical to the previous
+    # single-string check.
+    accepted_issuers = [i for i in (cfg.issuer, *cfg.additional_issuers) if i]
     try:
         return jwt.decode(
             token,
             jwks,
             algorithms=["RS256"],
-            issuer=cfg.issuer,
+            issuer=accepted_issuers,
             options={"verify_aud": False},
         )
     except JWTError as e:
