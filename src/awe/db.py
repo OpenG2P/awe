@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import StaticPool
 
 _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
@@ -36,7 +37,12 @@ def init_engine() -> AsyncEngine:
     # SQLite (used by the test suite) doesn't take pool_size / max_overflow —
     # only the production Postgres path needs those.
     kwargs: dict = {"pool_pre_ping": True}
-    if not url.startswith("sqlite"):
+    if url.startswith("sqlite"):
+        # Single shared connection for :memory: — avoids double-checkin noise
+        # and keeps the in-memory database visible across sessions.
+        kwargs["poolclass"] = StaticPool
+        kwargs["connect_args"] = {"check_same_thread": False}
+    else:
         kwargs["pool_size"] = 10
         kwargs["max_overflow"] = 5
     _engine = create_async_engine(url, **kwargs)

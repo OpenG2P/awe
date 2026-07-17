@@ -983,9 +983,11 @@ async def synthesize_decision(
         stages = sorted(policy.stages, key=lambda s: s.stage_order)
         group_key = _group_key(stage)
         group_stages = [s for s in stages if _group_key(s) == group_key]
-        all_group_done = all(
-            await _stage_is_terminal(session, s, request.id) for s in group_stages
-        )
+        all_group_done = True
+        for s in group_stages:
+            if not await _stage_is_terminal(session, s, request.id):
+                all_group_done = False
+                break
         if all_group_done:
             await _activate_next_group(
                 session,

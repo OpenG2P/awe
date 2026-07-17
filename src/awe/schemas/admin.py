@@ -24,6 +24,32 @@ class DeliveryOut(BaseModel):
     updated_at: datetime
 
 
+class KeycloakUserOut(BaseModel):
+    user_id: str = Field(..., description="Task assignee id (preferred_username)")
+    username: str
+    email: Optional[str] = None
+    name: Optional[str] = None
+
+
+class KeycloakClientOut(BaseModel):
+    client_id: str
+    name: str
+
+
+class KeycloakRoleOut(BaseModel):
+    name: str
+    client: Optional[str] = Field(
+        default=None,
+        description="clientId when this is a client role; null for realm roles.",
+    )
+    description: Optional[str] = None
+
+
+class KeycloakGroupOut(BaseModel):
+    path: str
+    name: str
+
+
 class AuditActionOut(BaseModel):
     # `metadata` clashes with BaseModel's own `metadata`; source attribute is
     # `metadata_` on the ORM model, exposed as `metadata` in the response.
