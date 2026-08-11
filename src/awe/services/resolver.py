@@ -118,7 +118,7 @@ async def _resolve_keycloak_role(role: str, client_id: str | None = None) -> Lis
         token = await keycloak_admin_token()
         base = f"{cfg.base_url.rstrip('/')}/admin/realms/{cfg.realm}"
         headers = {"Authorization": f"Bearer {token}"}
-        async with httpx.AsyncClient(timeout=5.0) as http_client:
+        async with httpx.AsyncClient(timeout=5.0, verify=cfg.verify_ssl) as http_client:
             if client_id:
                 lookup = await http_client.get(
                     f"{base}/clients",
@@ -156,7 +156,7 @@ async def _resolve_keycloak_group(group_path: str) -> List[str]:
             f"{cfg.base_url.rstrip('/')}/admin/realms/{cfg.realm}"
             f"/group-by-path/{group_path.lstrip('/')}"
         )
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=5.0, verify=cfg.verify_ssl) as client:
             grp = await client.get(
                 path_url, headers={"Authorization": f"Bearer {token}"}
             )
