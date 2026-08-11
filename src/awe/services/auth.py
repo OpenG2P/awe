@@ -52,11 +52,11 @@ class CallerIdentity:
 _jwks_cache: Optional[dict] = None
 
 
-async def _fetch_jwks(jwks_url: str) -> dict:
+async def _fetch_jwks(jwks_url: str, verify_ssl: bool = True) -> dict:
     global _jwks_cache
     if _jwks_cache is not None:
         return _jwks_cache
-    async with httpx.AsyncClient(timeout=5.0) as client:
+    async with httpx.AsyncClient(timeout=5.0, verify=verify_ssl) as client:
         resp = await client.get(jwks_url)
         resp.raise_for_status()
         _jwks_cache = resp.json()
@@ -103,7 +103,7 @@ async def _verify_token(token: str) -> dict:
     # failures here used to bubble up as bare 500s — catch them explicitly
     # so operators see the reason in the response + logs.
     try:
-        jwks = await _fetch_jwks(cfg.jwks_url)
+        jwks = await _fetch_jwks(cfg.jwks_url, verify_ssl=cfg.verify_ssl)
     except httpx.HTTPError as e:
         logger.exception("JWKS fetch failed: %s", cfg.jwks_url)
         raise HTTPException(

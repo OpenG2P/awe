@@ -270,6 +270,10 @@ awe:
     DB_NAME: '{{ tpl .Values.global.aweDB $ }}'
     DB_USER: '{{ tpl .Values.global.aweDBUser $ }}'
     CONFIG_PATH: /app/config/config.yaml
+    # Set to false to disable SSL verification for Keycloak HTTP calls
+    # (JWKS fetch, admin token, admin REST API). Use for self-signed certs.
+    # Never disable in production.
+    AWE__KEYCLOAK__VERIFY_SSL: true
 
   envVarsFrom:
     DB_PASSWORD:

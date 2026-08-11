@@ -24,7 +24,7 @@ async def keycloak_admin_token() -> str:
     token_url = (
         f"{cfg.base_url.rstrip('/')}/realms/{cfg.realm}/protocol/openid-connect/token"
     )
-    async with httpx.AsyncClient(timeout=5.0) as client:
+    async with httpx.AsyncClient(timeout=5.0, verify=cfg.verify_ssl) as client:
         resp = await client.post(
             token_url,
             data={
@@ -43,9 +43,10 @@ def _admin_base_url() -> str:
 
 
 async def _admin_get(path: str, params: dict[str, Any] | None = None) -> Any:
+    cfg = get_settings().awe.keycloak
     try:
         token = await keycloak_admin_token()
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, verify=cfg.verify_ssl) as client:
             resp = await client.get(
                 f"{_admin_base_url()}{path}",
                 headers={"Authorization": f"Bearer {token}"},

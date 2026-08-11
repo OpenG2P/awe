@@ -71,6 +71,11 @@ class KeycloakConfig(BaseModel):
     jwks_url: str = ""
     # Required audience claim. Empty disables the audience check (dev only).
     audience: str = ""
+    # Whether to verify SSL certificates for all Keycloak HTTP calls (JWKS
+    # fetch, admin token exchange, admin REST API). Set to False when using
+    # self-signed certificates or an internal network without valid TLS.
+    # Never disable in production.
+    verify_ssl: bool = True
 
 
 class NotifierConfig(BaseModel):
