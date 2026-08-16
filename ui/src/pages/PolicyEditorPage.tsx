@@ -99,6 +99,18 @@ export default function PolicyEditorPage() {
                         justifyContent: "flex-end",
                       }}
                     >
+                      {/* Read-only detail — the only way to inspect an
+                          active/archived version's stages and rules, and the
+                          only policy-content view available to AWE_VIEWER. */}
+                      <Link
+                        to={`/policies/${encodeURIComponent(
+                          policyKey
+                        )}/versions/${v.version}`}
+                        className="icon-btn success"
+                        style={actionBtnStyle}
+                      >
+                        View
+                      </Link>
                       <Link
                         to={`/policies/${encodeURIComponent(
                           policyKey

@@ -3,6 +3,7 @@ import Layout from "./components/Layout";
 import PoliciesPage from "./pages/PoliciesPage";
 import PolicyEditorPage from "./pages/PolicyEditorPage";
 import PolicyFormPage from "./pages/PolicyFormPage";
+import PolicyVersionPage from "./pages/PolicyVersionPage";
 import SimulatePage from "./pages/SimulatePage";
 import RequestsPage from "./pages/RequestsPage";
 import RequestDetailPage from "./pages/RequestDetailPage";
@@ -29,6 +30,13 @@ export default function App() {
         <Route
           path="/policies/:policyKey/versions/:version/simulate"
           element={<SimulatePage />}
+        />
+        {/* Read-only view of one version. Declared after `/versions/new`,
+            though order is not load-bearing: React Router ranks static
+            segments above dynamic ones, so `new` still wins over `:version`. */}
+        <Route
+          path="/policies/:policyKey/versions/:version"
+          element={<PolicyVersionPage />}
         />
         <Route path="/requests" element={<RequestsPage />} />
         <Route path="/requests/:requestId" element={<RequestDetailPage />} />
