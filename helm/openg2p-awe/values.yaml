@@ -13,6 +13,8 @@ global:
   keycloakBaseUrl: 'https://keycloak.{{ .Release.Namespace }}.openg2p.org'
   keycloakRealm: 'staff'
   keycloakIssuerUrl: '{{ tpl .Values.global.keycloakBaseUrl $ }}/realms/{{ tpl .Values.global.keycloakRealm $ }}'
+  # Internal IAM staff-portal-api URL (self-registration of the AWE tile).
+  iamServiceUrl: 'http://commons-services-iam-staff-portal-api'
   # OIDC client the admin SPA redirects to for login
   aweAdminPortalClientId: 'awe-admin-portal'
   # Service-account client used by AWE to call Keycloak admin API (for
@@ -139,6 +141,37 @@ keycloak-init:
               - "view-users"
               - "view-clients"
               - "query-groups"
+
+# ---------------------------------------------------------------------------
+# IAM registration — pushes the AWE admin SPA tile into staff_portal_applications.
+# Token uses awe-admin-resolver (confidential); mnemonic is awe-admin-portal.
+# Commons/Rancher skips Helm hooks — null the annotations there.
+# ---------------------------------------------------------------------------
+iamRegister:
+  enabled: true
+  applicationDescription: "Approval Workflow Engine"
+  image:
+    repository: curlimages/curl
+    tag: "8.11.1"
+    pullPolicy: IfNotPresent
+  backoffLimit: 5
+  tokenMaxAttempts: 30
+  registerMaxAttempts: 10
+  ttlSecondsAfterFinished: 600
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation
+  payloadAnnotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "19"
+    "helm.sh/hook-delete-policy": before-hook-creation
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
 
 awe:
   enabled: true

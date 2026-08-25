@@ -1,0 +1,121 @@
+{{- if .Values.iamRegister.enabled }}
+# Registers the AWE admin SPA into IAM at install/upgrade time.
+# Token uses the confidential awe-admin-resolver client (the SPA client is
+# public / PKCE). application_mnemonic is awe-admin-portal so staff-portal
+# role-gating matches resource_access on user tokens.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}-iam-register-{{ .Release.Revision }}
+  labels:
+    app.kubernetes.io/name: iam-register
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  {{- with .Values.iamRegister.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  backoffLimit: {{ .Values.iamRegister.backoffLimit | default 5 }}
+  ttlSecondsAfterFinished: {{ .Values.iamRegister.ttlSecondsAfterFinished | default 600 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: iam-register
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-iam
+          image: {{ .Values.iamRegister.image.repository }}:{{ .Values.iamRegister.image.tag }}
+          imagePullPolicy: {{ .Values.iamRegister.image.pullPolicy }}
+          command: ['sh', '-c']
+          args:
+            - |
+              echo "Waiting for IAM staff-portal API at ${IAM_BASE_URL}..."
+              until curl -sf --max-time 5 "${IAM_BASE_URL}/ping" >/dev/null 2>&1; do
+                echo "  waiting for iam-staff-portal-api..."; sleep 5
+              done
+              echo "  iam-staff-portal-api is ready."
+          env:
+            - name: IAM_BASE_URL
+              value: {{ tpl .Values.global.iamServiceUrl $ | quote }}
+      containers:
+        - name: iam-register
+          image: {{ .Values.iamRegister.image.repository }}:{{ .Values.iamRegister.image.tag }}
+          imagePullPolicy: {{ .Values.iamRegister.image.pullPolicy }}
+          env:
+            - name: IAM_REGISTER_URL
+              value: {{ printf "%s/user-access/staff_portal_applications" (tpl .Values.global.iamServiceUrl $) | quote }}
+            - name: TOKEN_URL
+              value: {{ printf "%s/protocol/openid-connect/token" (tpl .Values.global.keycloakIssuerUrl $) | quote }}
+            - name: CLIENT_ID
+              value: {{ tpl .Values.global.aweAdminResolverClientId $ | quote }}
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ tpl .Values.global.aweAdminResolverSecretName $ | quote }}
+                  key: {{ .Values.global.aweAdminResolverSecretKey | quote }}
+            - name: APP_MNEMONIC
+              value: {{ tpl .Values.global.aweAdminPortalClientId $ | quote }}
+            - name: APP_URL
+              value: {{ printf "https://%s" (tpl .Values.global.aweHostname $) | quote }}
+            - name: APP_DESCRIPTION
+              value: {{ tpl (.Values.iamRegister.applicationDescription | default "Approval Workflow Engine") $ | quote }}
+            - name: TOKEN_MAX_ATTEMPTS
+              value: {{ .Values.iamRegister.tokenMaxAttempts | default 30 | quote }}
+            - name: REGISTER_MAX_ATTEMPTS
+              value: {{ .Values.iamRegister.registerMaxAttempts | default 10 | quote }}
+          command: ['sh', '-c']
+          args:
+            - |
+              set -eu
+              echo "Building registration payload for ${APP_MNEMONIC} -> ${APP_URL}"
+              sed -e "s|__APPLICATION_MNEMONIC__|${APP_MNEMONIC}|g" \
+                  -e "s|__APPLICATION_URL__|${APP_URL}|g" \
+                  -e "s|__APPLICATION_DESCRIPTION__|${APP_DESCRIPTION}|g" \
+                  /payload/payload.json > /tmp/body.json
+
+              echo "Requesting access token from ${TOKEN_URL}"
+              i=0
+              TOKEN=""
+              while [ "$i" -lt "${TOKEN_MAX_ATTEMPTS}" ]; do
+                RESP=$(curl -s --max-time 10 -X POST "${TOKEN_URL}" \
+                  -d grant_type=client_credentials \
+                  -d client_id="${CLIENT_ID}" \
+                  --data-urlencode client_secret="${CLIENT_SECRET}" || true)
+                TOKEN=$(printf '%s' "${RESP}" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+                if [ -n "${TOKEN}" ]; then break; fi
+                echo "  token not ready (attempt ${i}); response: ${RESP}"
+                i=$((i+1)); sleep 5
+              done
+              if [ -z "${TOKEN}" ]; then
+                echo "ERROR: could not obtain access token"; exit 1
+              fi
+              echo "  got access token."
+
+              echo "Registering application with IAM at ${IAM_REGISTER_URL}"
+              i=0
+              while [ "$i" -lt "${REGISTER_MAX_ATTEMPTS}" ]; do
+                CODE=$(curl -s -o /tmp/out.json -w '%{http_code}' --max-time 30 \
+                  -X POST "${IAM_REGISTER_URL}" \
+                  -H "Authorization: Bearer ${TOKEN}" \
+                  -H "Content-Type: application/json" \
+                  --data @/tmp/body.json || true)
+                echo "  register HTTP ${CODE}: $(cat /tmp/out.json 2>/dev/null || true)"
+                case "${CODE}" in
+                  2*) echo "Registration succeeded."; exit 0 ;;
+                esac
+                i=$((i+1)); sleep 5
+              done
+              echo "ERROR: registration failed after ${REGISTER_MAX_ATTEMPTS} attempts"; exit 1
+          volumeMounts:
+            - name: payload
+              mountPath: /payload
+          {{- if .Values.iamRegister.resources }}
+          resources: {{- include "common.tplvalues.render" (dict "value" .Values.iamRegister.resources "context" $) | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: payload
+          configMap:
+            name: {{ .Release.Name }}-{{ .Chart.Name }}-iam-register-payload
+{{- end }}
