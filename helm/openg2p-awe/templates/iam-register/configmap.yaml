@@ -1,0 +1,19 @@
+{{- if .Values.iamRegister.enabled }}
+# Catalog this AWE release pushes into IAM (tile + AWE_ADMIN / AWE_VIEWER).
+# application_mnemonic and application_url are substituted at runtime by the
+# iam-register Job (__APPLICATION_MNEMONIC__ / __APPLICATION_URL__).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}-iam-register-payload
+  labels:
+    app.kubernetes.io/name: iam-register
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  {{- with .Values.iamRegister.payloadAnnotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  payload.json: |-
+{{ .Files.Get "files/iam-registration/payload.json" | indent 4 }}
+{{- end }}
