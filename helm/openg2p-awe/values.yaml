@@ -194,7 +194,7 @@ awe:
     create: false
     name: ""
   image:
-    repository: registry.gitlab.com/openg2p/platform-services/awe/openg2p-awe
+    repository: openg2p/openg2p-awe
     tag: "develop"
     pullPolicy: Always
   podSecurityContext:
@@ -385,7 +385,7 @@ ui:
     create: false
     name: ""
   image:
-    repository: registry.gitlab.com/openg2p/platform-services/awe/openg2p-awe-ui
+    repository: openg2p/openg2p-awe-ui
     tag: "develop"
     pullPolicy: Always
   podSecurityContext:
