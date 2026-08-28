@@ -22,6 +22,7 @@ if str(SRC) not in sys.path:
 # trigger config/engine init.
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("CONFIG_PATH", str(Path(__file__).parent / "fixtures" / "test-config.yaml"))
+os.environ.setdefault("AWE_TEST_MODE", "1")
 
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
@@ -33,9 +34,8 @@ async def client():
     from awe.main import app  # imported here so env vars take effect first
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as c:
-        # Trigger startup
-        async with app.router.lifespan_context(app):
+    async with app.router.lifespan_context(app):
+        async with AsyncClient(transport=transport, base_url="http://testserver") as c:
             yield c
 
 

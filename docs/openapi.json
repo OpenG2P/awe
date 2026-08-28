@@ -2876,6 +2876,450 @@
         }
       }
     },
+    "/v1/awe/admin/keycloak/users": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Search Keycloak users for policy rule pickers",
+        "operationId": "list_keycloak_users_v1_awe_admin_keycloak_users_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional search string (username, email, first/last name).",
+              "title": "Q"
+            },
+            "description": "Optional search string (username, email, first/last name)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KeycloakUserOut"
+                  },
+                  "title": "Response List Keycloak Users V1 Awe Admin Keycloak Users Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/awe/admin/keycloak/clients": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Keycloak clients for client-role pickers",
+        "operationId": "list_keycloak_clients_v1_awe_admin_keycloak_clients_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KeycloakClientOut"
+                  },
+                  "title": "Response List Keycloak Clients V1 Awe Admin Keycloak Clients Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/awe/admin/keycloak/roles": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Keycloak realm or client roles for policy rule pickers",
+        "operationId": "list_keycloak_roles_v1_awe_admin_keycloak_roles_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "client",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "clientId for client roles; omit for realm roles.",
+              "title": "Client"
+            },
+            "description": "clientId for client roles; omit for realm roles."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional filter on role name.",
+              "title": "Q"
+            },
+            "description": "Optional filter on role name."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KeycloakRoleOut"
+                  },
+                  "title": "Response List Keycloak Roles V1 Awe Admin Keycloak Roles Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/awe/admin/keycloak/groups": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Search Keycloak groups for policy rule pickers",
+        "operationId": "list_keycloak_groups_v1_awe_admin_keycloak_groups_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional search string (group name or path).",
+              "title": "Q"
+            },
+            "description": "Optional search string (group name or path)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KeycloakGroupOut"
+                  },
+                  "title": "Response List Keycloak Groups V1 Awe Admin Keycloak Groups Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer token missing, malformed, or fails signature/expiry checks.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Invalid or missing bearer token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token is valid but lacks `AWE_VIEWER` or `AWE_ADMIN` role.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "openg2p.awe",
+                  "version": "1.0",
+                  "responsetime": "2026-04-23T10:00:00.000Z",
+                  "errors": [
+                    {
+                      "errorCode": "AWE-008",
+                      "message": "Caller lacks AWE_VIEWER or AWE_ADMIN role"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/awe/delegations": {
       "get": {
         "tags": [
@@ -4071,6 +4515,119 @@
           "response"
         ],
         "title": "HealthResponse"
+      },
+      "KeycloakClientOut": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "name"
+        ],
+        "title": "KeycloakClientOut"
+      },
+      "KeycloakGroupOut": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "name"
+        ],
+        "title": "KeycloakGroupOut"
+      },
+      "KeycloakRoleOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "client": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client",
+            "description": "clientId when this is a client role; null for realm roles."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "KeycloakRoleOut"
+      },
+      "KeycloakUserOut": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Task assignee id (preferred_username)"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "username"
+        ],
+        "title": "KeycloakUserOut"
       },
       "PagedTasksOut": {
         "properties": {

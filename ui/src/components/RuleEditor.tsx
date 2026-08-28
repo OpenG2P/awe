@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../api/client";
 import type { RuleCreate } from "../api/client";
 
 interface Props {
@@ -16,6 +19,23 @@ const BLANK_VALUE: Record<RuleCreate["rule_type"], Record<string, unknown>> = {
   http: { url: "" },
 };
 
+function useDebouncedValue(value: string, delayMs = 300) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+function KeycloakLoadError({ label }: { label: string }) {
+  return (
+    <span style={{ fontSize: 11, color: "var(--color-danger, #c00)" }}>
+      Could not load {label} from Keycloak
+    </span>
+  );
+}
+
 export default function RuleEditor({ rule, onChange, onRemove }: Props) {
   function setType(type: RuleCreate["rule_type"]) {
     onChange({
@@ -28,6 +48,10 @@ export default function RuleEditor({ rule, onChange, onRemove }: Props) {
 
   function setField(key: string, value: unknown) {
     onChange({ ...rule, rule_value: { ...rule.rule_value, [key]: value } });
+  }
+
+  function patchRuleValue(patch: Record<string, unknown>) {
+    onChange({ ...rule, rule_value: { ...rule.rule_value, ...patch } });
   }
 
   const isObserver = rule.kind === "observer";
@@ -47,7 +71,9 @@ export default function RuleEditor({ rule, onChange, onRemove }: Props) {
         </select>
       </div>
 
-      <div className="rule-value-col">{renderValueEditor(rule, setField)}</div>
+      <div className="rule-value-col">
+        {renderValueEditor(rule, setField, patchRuleValue)}
+      </div>
 
       <select
         value={rule.kind ?? "approver"}
@@ -90,45 +116,228 @@ export default function RuleEditor({ rule, onChange, onRemove }: Props) {
   );
 }
 
+function UserSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (userId: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+
+  const { data: users, isLoading, isError } = useQuery({
+    queryKey: ["keycloak-users", debouncedSearch],
+    queryFn: () => api.listKeycloakUsers(debouncedSearch || undefined),
+  });
+
+  const options = users ?? [];
+  const hasSavedValue =
+    !!value && !options.some((u) => u.user_id === value);
+
+  function labelFor(user: (typeof options)[number]) {
+    const parts = [user.user_id];
+    if (user.name) parts.push(user.name);
+    if (user.email) parts.push(user.email);
+    return parts.join(" — ");
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search Keycloak users…"
+        style={{ fontSize: 12 }}
+      />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={isLoading}
+        style={{ flex: 1 }}
+      >
+        <option value="">
+          {isLoading ? "Loading users…" : "— Select user —"}
+        </option>
+        {hasSavedValue && (
+          <option value={value}>{value} (saved)</option>
+        )}
+        {options.map((u) => (
+          <option key={u.user_id} value={u.user_id}>
+            {labelFor(u)}
+          </option>
+        ))}
+      </select>
+      {isError && <KeycloakLoadError label="users" />}
+    </div>
+  );
+}
+
+function RoleSelect({
+  role,
+  client,
+  onChange,
+}: {
+  role: string;
+  client: string;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+
+  const { data: clients, isLoading: clientsLoading, isError: clientsError } =
+    useQuery({
+      queryKey: ["keycloak-clients"],
+      queryFn: () => api.listKeycloakClients(),
+    });
+
+  const {
+    data: roles,
+    isLoading: rolesLoading,
+    isError: rolesError,
+  } = useQuery({
+    queryKey: ["keycloak-roles", client || "realm", debouncedSearch],
+    queryFn: () =>
+      api.listKeycloakRoles(client || undefined, debouncedSearch || undefined),
+  });
+
+  const roleOptions = roles ?? [];
+  const hasSavedRole =
+    !!role && !roleOptions.some((r) => r.name === role);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+      <div style={{ display: "flex", gap: 8 }}>
+        <select
+          value={client}
+          onChange={(e) =>
+            onChange({
+              client: e.target.value || undefined,
+              role: "",
+            })
+          }
+          disabled={clientsLoading}
+          style={{ flex: 1 }}
+          title="Leave as realm role, or pick a client for client roles."
+        >
+          <option value="">
+            {clientsLoading ? "Loading…" : "Realm role"}
+          </option>
+          {(clients ?? []).map((c) => (
+            <option key={c.client_id} value={c.client_id}>
+              {c.client_id}
+              {c.name !== c.client_id ? ` — ${c.name}` : ""}
+            </option>
+          ))}
+        </select>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search roles…"
+          style={{ flex: 1, fontSize: 12 }}
+        />
+      </div>
+      <select
+        value={role}
+        onChange={(e) => onChange({ role: e.target.value })}
+        disabled={rolesLoading}
+        style={{ flex: 1 }}
+      >
+        <option value="">
+          {rolesLoading ? "Loading roles…" : "— Select role —"}
+        </option>
+        {hasSavedRole && (
+          <option value={role}>{role} (saved)</option>
+        )}
+        {roleOptions.map((r) => (
+          <option key={r.name} value={r.name}>
+            {r.description ? `${r.name} — ${r.description}` : r.name}
+          </option>
+        ))}
+      </select>
+      {clientsError && <KeycloakLoadError label="clients" />}
+      {rolesError && <KeycloakLoadError label="roles" />}
+    </div>
+  );
+}
+
+function GroupSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (groupPath: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+
+  const { data: groups, isLoading, isError } = useQuery({
+    queryKey: ["keycloak-groups", debouncedSearch],
+    queryFn: () => api.listKeycloakGroups(debouncedSearch || undefined),
+  });
+
+  const options = groups ?? [];
+  const hasSavedValue =
+    !!value && !options.some((g) => g.path === value);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search Keycloak groups…"
+        style={{ fontSize: 12 }}
+      />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={isLoading}
+        style={{ flex: 1 }}
+      >
+        <option value="">
+          {isLoading ? "Loading groups…" : "— Select group —"}
+        </option>
+        {hasSavedValue && (
+          <option value={value}>{value} (saved)</option>
+        )}
+        {options.map((g) => (
+          <option key={g.path} value={g.path}>
+            {g.path}
+            {g.name && g.name !== g.path ? ` — ${g.name}` : ""}
+          </option>
+        ))}
+      </select>
+      {isError && <KeycloakLoadError label="groups" />}
+    </div>
+  );
+}
+
 function renderValueEditor(
   rule: RuleCreate,
-  setField: (k: string, v: unknown) => void
+  setField: (k: string, v: unknown) => void,
+  patchRuleValue: (patch: Record<string, unknown>) => void
 ) {
   switch (rule.rule_type) {
     case "user":
       return (
-        <input
+        <UserSelect
           value={String(rule.rule_value.user_id ?? "")}
-          onChange={(e) => setField("user_id", e.target.value)}
-          placeholder="Keycloak username, e.g. alex.carter"
+          onChange={(userId) => setField("user_id", userId)}
         />
       );
     case "role":
       return (
-        <div style={{ display: "flex", gap: 8, flex: 1 }}>
-          <input
-            style={{ flex: 2 }}
-            value={String(rule.rule_value.role ?? "")}
-            onChange={(e) => setField("role", e.target.value)}
-            placeholder="Role name, e.g. PROGRAM_MANAGER"
-          />
-          <input
-            style={{ flex: 1 }}
-            value={String(rule.rule_value.client ?? "")}
-            onChange={(e) =>
-              setField("client", e.target.value || undefined)
-            }
-            placeholder="Client (optional; blank = realm role)"
-            title="Leave blank for a realm role. Set to a clientId (e.g. registry-staff-portal) to resolve a client role."
-          />
-        </div>
+        <RoleSelect
+          role={String(rule.rule_value.role ?? "")}
+          client={String(rule.rule_value.client ?? "")}
+          onChange={patchRuleValue}
+        />
       );
     case "group":
       return (
-        <input
+        <GroupSelect
           value={String(rule.rule_value.group ?? "")}
-          onChange={(e) => setField("group", e.target.value)}
-          placeholder="Keycloak group path, e.g. /states/d1/officers"
+          onChange={(groupPath) => setField("group", groupPath)}
         />
       );
     case "http":

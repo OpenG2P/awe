@@ -1,0 +1,49 @@
+name: Generate OpenAPI spec
+
+# Keeps docs/openapi.json in sync with the FastAPI app. The GitBook API
+# reference page renders directly from this committed file, so it must track
+# the code. This used to live inside the (now-removed) docker-build.yml; it is
+# a docs-generation concern, orthogonal to image/chart build+publish, so it
+# lives in its own workflow rather than the centralized build-publish stub.
+#
+# Commits with [skip ci] so it never re-triggers build-publish.yml.
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["**"]
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'scripts/generate_openapi.py'
+      - '.github/workflows/generate-openapi.yml'
+  workflow_dispatch:
+
+jobs:
+  generate-openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Generate OpenAPI spec
+        run: |
+          pip install -e .
+          mkdir -p docs
+          python scripts/generate_openapi.py > docs/openapi.json
+
+      - name: Commit OpenAPI spec if changed
+        run: |
+          git config user.name "openg2pbot"
+          git config user.email "bot@openg2p.org"
+          if ! git diff --quiet docs/openapi.json; then
+            git add docs/openapi.json
+            git commit -m "chore: auto-generate OpenAPI spec [skip ci]"
+            git push
+          fi
