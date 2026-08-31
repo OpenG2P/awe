@@ -70,7 +70,12 @@ class ApprovalTask(Base, TimestampMixin):
     __table_args__ = (
         Index("idx_task_assignee_status", "assignee", "status"),
         Index("idx_task_request_stage", "request_id", "stage_order"),
-        Index("idx_task_search_text", "search_text"),
+        Index(
+            "idx_task_search_text_gin",
+            "search_text",
+            postgresql_using="gin",
+            postgresql_ops={"search_text": "gin_trgm_ops"},
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -122,7 +127,7 @@ class ApprovalDecision(Base, TimestampMixin):
         ForeignKey("approval_request.id", ondelete="CASCADE"),
         nullable=False,
     )
-    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("approval_task.id"))
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("approval_task.id"), index=True)
     stage_order: Mapped[int] = mapped_column(Integer, nullable=False)
     actor: Mapped[str] = mapped_column(String(128), nullable=False)
     # approve | reject | abstain
