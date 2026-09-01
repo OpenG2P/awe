@@ -39,6 +39,8 @@ postgres-init:
       user: '{{ tpl .Values.global.aweDBUser $ }}'
       secret: '{{ tpl .Values.global.aweDBSecret $ }}'
       secretUserPasswordKey: '{{ tpl .Values.global.aweDBUserPasswordKey $ }}'
+      extensions:
+        - 'pg_trgm'
 
 # ---------------------------------------------------------------------------
 # keycloak-init — provisions AWE's clients, roles, and role-mappings in the

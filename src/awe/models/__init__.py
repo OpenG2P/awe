@@ -69,6 +69,15 @@ def _create_all(sync_conn) -> None:
     if sync_conn.dialect.name == "postgresql":
         sync_conn.exec_driver_sql(_PG_ENSURE_SCHEMA)
         sync_conn.exec_driver_sql("SET search_path TO public, awe")
+        # gin_trgm_ops on approval_task.search_text. App users cannot always
+        # CREATE EXTENSION; postgres-init installs pg_trgm as superuser.
+        nested = sync_conn.begin_nested()
+        try:
+            sync_conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+            nested.commit()
+        except Exception:
+            nested.rollback()
+            logger.warning("Could not CREATE EXTENSION pg_trgm; it must already exist")
     Base.metadata.create_all(sync_conn)
 
 
