@@ -43,8 +43,11 @@ def init_engine() -> AsyncEngine:
         kwargs["poolclass"] = StaticPool
         kwargs["connect_args"] = {"check_same_thread": False}
     else:
-        kwargs["pool_size"] = 10
-        kwargs["max_overflow"] = 5
+        # Make pool sizes configurable via environment variables
+        # Defaults increased for production workloads
+        kwargs["pool_size"] = int(os.environ.get("DB_POOL_SIZE", "20"))
+        kwargs["max_overflow"] = int(os.environ.get("DB_POOL_MAX_OVERFLOW", "15"))
+        kwargs["pool_recycle"] = int(os.environ.get("DB_POOL_RECYCLE", "1800"))
     _engine = create_async_engine(url, **kwargs)
     _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
     return _engine

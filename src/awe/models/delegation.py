@@ -23,6 +23,8 @@ class UserDelegation(Base, TimestampMixin):
     __tablename__ = "user_delegation"
     __table_args__ = (
         Index("idx_delegation_user_window", "user_id", "starts_at", "ends_at"),
+        Index("idx_delegation_assignee", "user_id"),
+        Index("idx_delegation_delegated_to", "delegate_to"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)

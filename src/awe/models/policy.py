@@ -22,6 +22,7 @@ class ApprovalPolicy(Base, TimestampMixin):
     __table_args__ = (
         UniqueConstraint("policy_key", "version", name="uq_policy_key_version"),
         Index("idx_policy_key_status", "policy_key", "status"),
+        Index("idx_policy_id", "id"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)

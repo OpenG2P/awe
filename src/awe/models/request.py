@@ -22,6 +22,9 @@ class ApprovalRequest(Base, TimestampMixin):
     __table_args__ = (
         Index("idx_request_artifact", "artifact_type", "artifact_id"),
         Index("idx_request_status", "status"),
+        Index("idx_request_artifact_type", "artifact_type"),
+        Index("idx_request_artifact_id", "artifact_id"),
+        Index("idx_request_created_at", "created_at"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -70,6 +73,9 @@ class ApprovalTask(Base, TimestampMixin):
     __table_args__ = (
         Index("idx_task_assignee_status", "assignee", "status"),
         Index("idx_task_request_stage", "request_id", "stage_order"),
+        Index("idx_task_request_id", "request_id"),
+        Index("idx_task_assignee_status_created", "assignee", "status", "created_at"),
+        Index("idx_task_created_at", "created_at"),
         Index(
             "idx_task_search_text_gin",
             "search_text",
@@ -119,7 +125,10 @@ class ApprovalDecision(Base, TimestampMixin):
     """Append-only record of an approver's action on a task."""
 
     __tablename__ = "approval_decision"
-    __table_args__ = (Index("idx_decision_request", "request_id"),)
+    __table_args__ = (
+        Index("idx_decision_request", "request_id"),
+        Index("idx_decision_task_id", "task_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     request_id: Mapped[str] = mapped_column(
@@ -142,7 +151,10 @@ class ApprovalEvent(Base):
     """Append-only audit log. Every row is also a candidate webhook delivery."""
 
     __tablename__ = "approval_event"
-    __table_args__ = (Index("idx_event_request_created", "request_id", "created_at"),)
+    __table_args__ = (
+        Index("idx_event_request_created", "request_id", "created_at"),
+        Index("idx_event_request_id", "request_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     request_id: Mapped[str] = mapped_column(

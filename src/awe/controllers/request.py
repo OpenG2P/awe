@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
 from ..db import get_db
 from ..models import (
@@ -100,7 +101,7 @@ async def create_request(
             ApprovalTask.stage_order == request.current_stage_order,
         )
     )
-    tasks = list(tasks_rows.scalars())
+    tasks = list(tasks_rows.scalars().unique())
 
     out = CreateRequestOut(
         request_id=request.id,
@@ -154,7 +155,7 @@ async def search_requests(
     artifact_type: Optional[str] = Query(default=None),
     artifact_id: Optional[str] = Query(default=None),
     status_filter: Optional[str] = Query(default=None, alias="status"),
-    limit: int = Query(default=50, ge=1, le=500),
+    limit: int = Query(default=50, ge=1, le=100),  # Reduced from 500 to 100 for performance
     identity: CallerIdentity = Depends(current_identity),
     session: AsyncSession = Depends(get_db),
 ):
