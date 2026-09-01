@@ -195,7 +195,7 @@ awe:
     name: ""
   image:
     repository: openg2p/openg2p-awe
-    tag: "develop"
+    tag: "1.2.1"
     pullPolicy: Always
   podSecurityContext:
     enabled: false
@@ -386,7 +386,7 @@ ui:
     name: ""
   image:
     repository: openg2p/openg2p-awe-ui
-    tag: "develop"
+    tag: "1.2.1"
     pullPolicy: Always
   podSecurityContext:
     enabled: false
