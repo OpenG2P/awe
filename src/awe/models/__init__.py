@@ -45,21 +45,26 @@ __all__ = [
 _PG_ENSURE_SCHEMA = """
 DO $awe$
 BEGIN
+  -- Ensure public schema exists
   BEGIN
     CREATE SCHEMA IF NOT EXISTS public;
   EXCEPTION WHEN OTHERS THEN
     NULL;
   END;
 
+  -- Grant CREATE on public schema to current user
   BEGIN
-    EXECUTE 'GRANT USAGE, CREATE ON SCHEMA public TO CURRENT_USER';
+    EXECUTE 'GRANT ALL ON SCHEMA public TO CURRENT_USER';
   EXCEPTION WHEN OTHERS THEN
     NULL;
   END;
 
-  IF NOT has_schema_privilege(current_user, 'public', 'CREATE') THEN
-    EXECUTE 'CREATE SCHEMA IF NOT EXISTS awe AUTHORIZATION CURRENT_USER';
-  END IF;
+  -- Grant default privileges on public schema
+  BEGIN
+    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO CURRENT_USER';
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 END
 $awe$;
 """
@@ -68,16 +73,7 @@ $awe$;
 def _create_all(sync_conn) -> None:
     if sync_conn.dialect.name == "postgresql":
         sync_conn.exec_driver_sql(_PG_ENSURE_SCHEMA)
-        sync_conn.exec_driver_sql("SET search_path TO public, awe")
-        # gin_trgm_ops on approval_task.search_text. App users cannot always
-        # CREATE EXTENSION; postgres-init installs pg_trgm as superuser.
-        nested = sync_conn.begin_nested()
-        try:
-            sync_conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pg_trgm")
-            nested.commit()
-        except Exception:
-            nested.rollback()
-            logger.warning("Could not CREATE EXTENSION pg_trgm; it must already exist")
+        sync_conn.exec_driver_sql("SET search_path TO public")
     Base.metadata.create_all(sync_conn)
 
 

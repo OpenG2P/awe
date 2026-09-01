@@ -35,7 +35,7 @@ def _build_database_url() -> str:
 def _set_search_path(dbapi_connection, _connection_record) -> None:
     # JDBC currentSchema is not valid for asyncpg. SET on connect instead.
     cursor = dbapi_connection.cursor()
-    cursor.execute("SET search_path TO public, awe")
+    cursor.execute("SET search_path TO public")
     cursor.close()
 
 
