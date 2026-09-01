@@ -76,12 +76,7 @@ class ApprovalTask(Base, TimestampMixin):
         Index("idx_task_request_id", "request_id"),
         Index("idx_task_assignee_status_created", "assignee", "status", "created_at"),
         Index("idx_task_created_at", "created_at"),
-        Index(
-            "idx_task_search_text_gin",
-            "search_text",
-            postgresql_using="gin",
-            postgresql_ops={"search_text": "gin_trgm_ops"},
-        ),
+        Index("idx_task_search_text", "search_text"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
