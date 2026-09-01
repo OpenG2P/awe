@@ -12,7 +12,7 @@ dependencies:
   repository: https://openg2p.github.io/openg2p-helm
   condition: postgres-init.enabled
 - name: keycloak-init
-  version: 0.0.0-develop.60
+  version: 1.2.0
   repository: https://openg2p.github.io/openg2p-helm
   condition: keycloak-init.enabled
 icon: https://openg2p.github.io/openg2p-helm/openg2p-logo.png
