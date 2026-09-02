@@ -1411,7 +1411,7 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 500,
+              "maximum": 100,
               "minimum": 1,
               "default": 50,
               "title": "Limit"
