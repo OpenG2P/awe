@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from ..db import get_db
 from ..models import ApprovalDecision, ApprovalRequest, ApprovalTask
@@ -181,7 +181,7 @@ async def list_tasks(
     offset = (page - 1) * page_size
     stmt = (
         select(ApprovalTask)
-        .options(selectinload(ApprovalTask.request))
+        .options(joinedload(ApprovalTask.request))
         .where(*task_filters)
         .order_by(ApprovalTask.created_at.desc())
         .offset(offset)
@@ -191,7 +191,7 @@ async def list_tasks(
         stmt = _apply_request_join(stmt)
 
     rows = await session.execute(stmt)
-    tasks = rows.scalars().all()
+    tasks = rows.scalars().unique().all()
 
     decision_ids = [t.decision_id for t in tasks if t.decision_id]
     decision_map: dict[str, ApprovalDecision] = {}
@@ -261,7 +261,14 @@ async def decide(
     identity: CallerIdentity = Depends(current_identity),
     session: AsyncSession = Depends(get_db),
 ):
-    task = await session.get(ApprovalTask, task_id)
+    # Load task with request in a single query using joinedload
+    from sqlalchemy.orm import joinedload
+    task = await session.execute(
+        select(ApprovalTask)
+        .options(joinedload(ApprovalTask.request))
+        .where(ApprovalTask.id == task_id)
+    )
+    task = task.scalar_one_or_none()
     if task is None:
         return error(404, "AWE-004", f"Task {task_id} not found")
     if task.assignee != identity.assignee_id and "AWE_ADMIN" not in identity.roles:
@@ -269,7 +276,7 @@ async def decide(
     if task.status not in ("open", "claimed"):
         return error(409, "AWE-007", f"Task is in '{task.status}' state — cannot decide")
 
-    request = await session.get(ApprovalRequest, task.request_id)
+    request = task.request
     if request is None:
         return error(404, "AWE-003", "Owning request not found (data inconsistency)")
 

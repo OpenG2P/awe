@@ -71,6 +71,11 @@ class EngineError(Exception):
     pass
 
 
+# Simple policy cache to avoid repeated database loads
+_policy_cache: Dict[str, tuple[ApprovalPolicy, float]] = {}
+_POLICY_CACHE_TTL = 300  # 5 minutes
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -743,6 +748,15 @@ def _stage_at(policy: ApprovalPolicy, order: int) -> ApprovalStage:
 
 
 async def _load_policy(session: AsyncSession, policy_id: str) -> ApprovalPolicy:
+    # Check cache first
+    import time
+    now = time.time()
+    if policy_id in _policy_cache:
+        policy, cached_at = _policy_cache[policy_id]
+        if now - cached_at < _POLICY_CACHE_TTL:
+            return policy
+
+    # Load from database
     row = await session.execute(
         select(ApprovalPolicy)
         .options(
@@ -753,6 +767,9 @@ async def _load_policy(session: AsyncSession, policy_id: str) -> ApprovalPolicy:
     policy = row.scalar_one_or_none()
     if policy is None:
         raise EngineError(f"Policy {policy_id} not found")
+
+    # Cache the policy
+    _policy_cache[policy_id] = (policy, now)
     return policy
 
 

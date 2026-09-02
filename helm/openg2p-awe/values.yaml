@@ -39,6 +39,8 @@ postgres-init:
       user: '{{ tpl .Values.global.aweDBUser $ }}'
       secret: '{{ tpl .Values.global.aweDBSecret $ }}'
       secretUserPasswordKey: '{{ tpl .Values.global.aweDBUserPasswordKey $ }}'
+      extensions:
+        - 'pg_trgm'
 
 # ---------------------------------------------------------------------------
 # keycloak-init — provisions AWE's clients, roles, and role-mappings in the
@@ -303,6 +305,10 @@ awe:
     DB_NAME: '{{ tpl .Values.global.aweDB $ }}'
     DB_USER: '{{ tpl .Values.global.aweDBUser $ }}'
     CONFIG_PATH: /app/config/config.yaml
+    # Database pool configuration
+    DB_POOL_SIZE: '5'
+    DB_POOL_MAX_OVERFLOW: '10'
+    DB_POOL_RECYCLE: '1800'
     # Set to false to disable SSL verification for Keycloak HTTP calls
     # (JWKS fetch, admin token, admin REST API). Use for self-signed certs.
     # Never disable in production.

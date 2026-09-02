@@ -4,6 +4,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -31,6 +32,13 @@ def _build_database_url() -> str:
     return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{name}"
 
 
+def _set_search_path(dbapi_connection, _connection_record) -> None:
+    # JDBC currentSchema is not valid for asyncpg. SET on connect instead.
+    cursor = dbapi_connection.cursor()
+    cursor.execute("SET search_path TO public")
+    cursor.close()
+
+
 def init_engine() -> AsyncEngine:
     global _engine, _sessionmaker
     url = _build_database_url()
@@ -43,9 +51,14 @@ def init_engine() -> AsyncEngine:
         kwargs["poolclass"] = StaticPool
         kwargs["connect_args"] = {"check_same_thread": False}
     else:
-        kwargs["pool_size"] = 10
-        kwargs["max_overflow"] = 5
+        # Make pool sizes configurable via environment variables
+        # Defaults increased for production workloads
+        kwargs["pool_size"] = int(os.environ.get("DB_POOL_SIZE", "10"))
+        kwargs["max_overflow"] = int(os.environ.get("DB_POOL_MAX_OVERFLOW", "5"))
+        kwargs["pool_recycle"] = int(os.environ.get("DB_POOL_RECYCLE", "1800"))
     _engine = create_async_engine(url, **kwargs)
+    if not url.startswith("sqlite"):
+        event.listen(_engine.sync_engine, "connect", _set_search_path)
     _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
     return _engine
 
