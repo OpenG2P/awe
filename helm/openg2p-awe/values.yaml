@@ -39,6 +39,8 @@ postgres-init:
       user: '{{ tpl .Values.global.aweDBUser $ }}'
       secret: '{{ tpl .Values.global.aweDBSecret $ }}'
       secretUserPasswordKey: '{{ tpl .Values.global.aweDBUserPasswordKey $ }}'
+      extensions:
+        - 'pg_trgm'
 
 # ---------------------------------------------------------------------------
 # keycloak-init — provisions AWE's clients, roles, and role-mappings in the
@@ -195,7 +197,7 @@ awe:
     name: ""
   image:
     repository: openg2p/openg2p-awe
-    tag: "1.2.1"
+    tag: "1.2.2"
     pullPolicy: Always
   podSecurityContext:
     enabled: false
@@ -386,7 +388,7 @@ ui:
     name: ""
   image:
     repository: openg2p/openg2p-awe-ui
-    tag: "1.2.1"
+    tag: "1.2.2"
     pullPolicy: Always
   podSecurityContext:
     enabled: false
