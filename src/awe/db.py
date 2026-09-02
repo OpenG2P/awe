@@ -53,8 +53,8 @@ def init_engine() -> AsyncEngine:
     else:
         # Make pool sizes configurable via environment variables
         # Defaults increased for production workloads
-        kwargs["pool_size"] = int(os.environ.get("DB_POOL_SIZE", "20"))
-        kwargs["max_overflow"] = int(os.environ.get("DB_POOL_MAX_OVERFLOW", "15"))
+        kwargs["pool_size"] = int(os.environ.get("DB_POOL_SIZE", "10"))
+        kwargs["max_overflow"] = int(os.environ.get("DB_POOL_MAX_OVERFLOW", "5"))
         kwargs["pool_recycle"] = int(os.environ.get("DB_POOL_RECYCLE", "1800"))
     _engine = create_async_engine(url, **kwargs)
     if not url.startswith("sqlite"):
