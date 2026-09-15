@@ -150,13 +150,14 @@ async def list_tasks(
         task_filters.append(ApprovalTask.status == status_filter)
 
     request_filters = []
-    needs_request_join = bool(artifact_type or policy_key or search_text)
+    search_needle = (search_text or "").strip()
+    needs_request_join = bool(artifact_type or policy_key or search_needle)
     if artifact_type:
         request_filters.append(ApprovalRequest.artifact_type == artifact_type)
     if policy_key:
         request_filters.append(ApprovalRequest.policy_key == policy_key)
-    if search_text:
-        pattern = f"%{search_text.strip()}%"
+    if search_needle:
+        pattern = f"%{search_needle}%"
         request_filters.append(
             or_(
                 ApprovalTask.search_text.ilike(pattern),
