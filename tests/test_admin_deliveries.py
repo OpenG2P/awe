@@ -213,9 +213,9 @@ async def test_tasks_request_id_filter(
     )
     request_id = resp.json()["request_id"]
 
-    # request_id filter + assignee=* returns all tasks for that request.
+    # status=open lists every open task; bare assignee=* is caller-open plus all completed.
     resp = await client.get(
-        f"/v1/awe/tasks?assignee=*&request_id={request_id}",
+        f"/v1/awe/tasks?assignee=*&request_id={request_id}&status=open",
         headers=auth_header(service_token),
     )
     assert resp.status_code == 200

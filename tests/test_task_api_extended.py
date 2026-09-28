@@ -60,7 +60,7 @@ async def _setup_request(client, admin_token, service_token, *, policy_key: str,
     assert resp.status_code == 201, resp.text
     request_id = resp.json()["request_id"]
     tasks_resp = await client.get(
-        f"/v1/awe/tasks?assignee=*&request_id={request_id}",
+        f"/v1/awe/tasks?assignee=*&request_id={request_id}&status=open",
         headers=auth_header(service_token),
     )
     alice_task = next(t for t in tasks_resp.json()["items"] if t["assignee"] == "u-alice")
@@ -166,7 +166,7 @@ async def test_claim_and_decide_errors(client, admin_token, service_token) -> No
     assert resp.json()["errors"][0]["errorCode"] == "AWE-008"
 
     tasks_resp = await client.get(
-        f"/v1/awe/tasks?assignee=*&request_id={request_id}",
+        f"/v1/awe/tasks?assignee=*&request_id={request_id}&status=open",
         headers=auth_header(service_token),
     )
     bob_task_id = next(t["id"] for t in tasks_resp.json()["items"] if t["assignee"] == "u-bob")
@@ -219,7 +219,7 @@ async def test_claim_and_decide_errors(client, admin_token, service_token) -> No
     assert resp.status_code == 409
 
     resp = await client.get(
-        f"/v1/awe/tasks?assignee=*&request_id={request_id}&search_text=searchable",
+        f"/v1/awe/tasks?assignee=*&request_id={request_id}&status=open&search_text=searchable",
         headers=auth_header(service_token),
     )
     assert resp.status_code == 200
