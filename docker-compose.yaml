@@ -29,6 +29,13 @@ services:
       DB_NAME: awe
       DB_USER: postgres
       DB_PASSWORD: postgres
+      # Notifications (openg2p-notification, Novu). Unset = disabled — the
+      # connector skips every send while NOTIFICATION_WORKFLOWS is empty.
+      # Point at the workspace Novu (root docker-compose.yml) for local dev.
+      # NOTIFICATION_PROVIDER_URL: http://host.docker.internal:3000
+      # NOTIFICATION_PROVIDER_API_KEY: <novu secret key>
+      # NOTIFICATION_WORKFLOWS: '{"approval.stage_started":"approval-stage-started","approval.task_reassigned":"approval-task-reassigned","approval.stage_escalated":"approval-stage-escalated","approval.task_expired":"approval-task-expired","approval.request_approved":"approval-request-approved","approval.request_rejected":"approval-request-rejected","approval.request_cancelled":"approval-request-cancelled","approval.stage_quorum_skipped":"approval-stage-quorum-skipped"}'
+      # NOTIFICATION_STAFF_PORTAL_BASE_URL: http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy

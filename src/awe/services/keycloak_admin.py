@@ -88,6 +88,21 @@ async def list_users(q: str | None = None, limit: int = 100) -> List[Dict[str, A
     return out
 
 
+async def get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
+    """Exact-match lookup by username — used for notification recipients.
+
+    Returns `_format_user`'s shape (user_id/username/email/name) or None when
+    the user does not exist. Raises KeycloakAdminError on transport failure —
+    callers degrade (send without email/name) rather than propagate.
+    """
+    raw = await _admin_get("/users", {"username": username, "exact": "true"})
+    for item in raw:
+        formatted = _format_user(item)
+        if formatted is not None:
+            return formatted
+    return None
+
+
 async def list_clients(limit: int = 200) -> List[Dict[str, Any]]:
     """List Keycloak clients (by clientId) for client-role pickers."""
     raw = await _admin_get("/clients", {"max": limit})

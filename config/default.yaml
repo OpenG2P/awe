@@ -34,13 +34,3 @@ awe:
     jwks_url: ""
     audience: ""
 
-  # Approver email notifications (best-effort, optional).
-  notifier:
-    enabled: false
-    smtp_host: ""
-    smtp_port: 587
-    smtp_user: ""
-    smtp_password: ""
-    from_address: no-reply@openg2p.org
-    use_tls: true
-

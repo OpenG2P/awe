@@ -39,12 +39,5 @@ data:
         issuer: {{ tpl .Values.appConfig.keycloak.issuer $ | quote }}
         jwks_url: {{ tpl .Values.appConfig.keycloak.jwksUrl $ | quote }}
         audience: {{ tpl .Values.appConfig.keycloak.audience $ | quote }}
-
-      notifier:
-        enabled: {{ .Values.appConfig.notifier.enabled }}
-        smtp_host: {{ .Values.appConfig.notifier.smtpHost | quote }}
-        smtp_port: {{ .Values.appConfig.notifier.smtpPort }}
-        from_address: {{ .Values.appConfig.notifier.fromAddress | quote }}
-        use_tls: {{ .Values.appConfig.notifier.useTls }}
 {{- end -}}
 {{- end }}

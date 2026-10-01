@@ -23,6 +23,11 @@ if str(SRC) not in sys.path:
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("CONFIG_PATH", str(Path(__file__).parent / "fixtures" / "test-config.yaml"))
 os.environ.setdefault("AWE_TEST_MODE", "1")
+# Keep the suite hermetic: a developer shell with NOTIFICATION_WORKFLOWS set
+# must not make approval tests call Novu. Tests that exercise sending mock
+# the connector instead of relying on these.
+os.environ["NOTIFICATION_ENABLED"] = "false"
+os.environ["NOTIFICATION_WORKFLOWS"] = "{}"
 
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402

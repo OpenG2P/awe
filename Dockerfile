@@ -21,14 +21,26 @@
 # ---------------------------------------------------------------------------
 FROM python:3.13-slim AS builder
 
+# Notification connector (openg2p-notification, Novu) — optional at runtime:
+# the app soft-imports it, so this stays a build-time-only extra. Wheels are
+# built here (git is needed only for the git+https fetch) and installed in
+# the runtime stage from the local wheelhouse. Mirrors registry-platform's
+# NOTIFICATION_REPO/NOTIFICATION_REF pattern.
+ARG NOTIFICATION_REPO=openg2p/notifications
+ARG NOTIFICATION_REF=develop
+
 WORKDIR /build
 
 COPY pyproject.toml .
 COPY src/ src/
 COPY config/ config/
 
-RUN pip install --no-cache-dir build && \
-    python -m build --wheel --outdir /build/dist
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    pip install --no-cache-dir build && \
+    python -m build --wheel --outdir /build/dist && \
+    pip wheel --no-cache-dir --wheel-dir /build/connector-wheels \
+        "git+https://github.com/${NOTIFICATION_REPO}@${NOTIFICATION_REF}#subdirectory=connector"
 
 # ---------------------------------------------------------------------------
 # Stage 2: Runtime
@@ -61,8 +73,11 @@ RUN groupadd --gid 1000 appuser && \
 WORKDIR /app
 
 COPY --from=builder /build/dist/*.whl /tmp/
+COPY --from=builder /build/connector-wheels /tmp/connector-wheels
 RUN pip install --no-cache-dir /tmp/*.whl && \
-    rm -f /tmp/*.whl
+    pip install --no-index --no-cache-dir \
+        --find-links=/tmp/connector-wheels openg2p-notification && \
+    rm -rf /tmp/*.whl /tmp/connector-wheels
 
 COPY --chown=appuser:appuser config/ /app/config/
 COPY --chown=appuser:appuser docker-entrypoint.sh /app/

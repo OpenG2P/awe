@@ -64,7 +64,14 @@ def get_sessionmaker() -> async_sessionmaker[AsyncSession]:
 
 @asynccontextmanager
 async def session_scope() -> AsyncIterator[AsyncSession]:
-    """Transactional session — commits on success, rolls back on error."""
+    """Transactional session — commits on success, rolls back on error.
+
+    After a successful commit the session's notification intents (stashed
+    inside the transaction by awe.services.notification.collect) are sent.
+    The rollback path never flushes — a rolled-back request never notifies.
+    """
+    from .services import notification
+
     maker = get_sessionmaker()
     async with maker() as session:
         try:
@@ -73,6 +80,8 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
         except Exception:
             await session.rollback()
             raise
+        else:
+            await notification.flush(session)
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
