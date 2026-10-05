@@ -50,10 +50,12 @@ ENV DB_USER=postgres
 
 ENV CONFIG_PATH=/app/config/default.yaml
 
-ENV UVICORN_HOST=0.0.0.0
-ENV UVICORN_PORT=8000
-ENV UVICORN_WORKERS=2
-ENV UVICORN_LOG_LEVEL=info
+ENV AWE_WORKER_TYPE=gunicorn
+ENV AWE_HOST=0.0.0.0
+ENV AWE_PORT=8000
+# Default worker count kept low (2) for predictable memory; the Helm chart
+# overrides this per-deployment via AWE_NO_OF_WORKERS in envVars.
+ENV AWE_NO_OF_WORKERS=2
 
 RUN groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid 1000 --create-home appuser
