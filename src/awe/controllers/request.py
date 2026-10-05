@@ -41,6 +41,7 @@ from ..schemas.responses import (
 )
 from ..services import audit as audit_svc
 from ..services import engine as engine_svc
+from ..services import notification as notification_svc
 from ..services import policy as policy_svc
 from ..services.auth import CallerIdentity, current_identity, require_role
 from ._helpers import (
@@ -121,8 +122,12 @@ async def create_request(
         try:
             await session.flush()
         except IntegrityError:
-            # Concurrent retry inserted the same key — fall through.
+            # Concurrent retry inserted the same key — fall through. The
+            # rollback also drops this attempt's engine writes, so drop its
+            # notification intents too — they would announce a request that
+            # never existed.
             await session.rollback()
+            notification_svc.discard(session)
 
     return response_payload
 

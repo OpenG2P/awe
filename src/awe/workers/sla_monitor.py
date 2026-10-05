@@ -31,6 +31,7 @@ from ..config import get_settings
 from ..models import ApprovalPolicy, ApprovalRequest, ApprovalStage, ApprovalTask
 from ..models.base import utcnow
 from ..services import engine as engine_svc
+from ..services import notification as notification_svc
 from ..services.engine import emit_event
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,8 @@ async def _tick(sm: async_sessionmaker) -> None:
                 await _apply_on_breach(session, request, stage)
 
         await session.commit()
+        # Post-commit: send notifications for events emitted in this tick.
+        await notification_svc.flush(session)
         logger.info(
             "SLA monitor expired %d task(s) across %d request(s)",
             len(tasks),

@@ -46,6 +46,7 @@ testpaths = ["tests"]
 [tool.coverage.run]
 source = ["src/awe"]
 branch = false
+concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
 fail_under = 100

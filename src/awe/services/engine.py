@@ -61,6 +61,7 @@ from ..models import (
     WebhookDelivery,
 )
 from ..models.base import new_uuid, utcnow
+from . import notification as notification_svc
 from . import resolver as resolver_svc
 from .task_search import build_task_search_text
 
@@ -172,7 +173,8 @@ async def apply_decision(
 
     # outcome == "approved" for this stage. Close any leftover open tasks on
     # THIS stage (e.g. quorum hit — no need for the remaining approvers).
-    await _close_stage_open_tasks(session, request.id, stage.stage_order)
+    skipped = await _close_stage_open_tasks(session, request.id, stage.stage_order)
+    await _emit_quorum_skipped(session, request, stage, skipped)
     await emit_event(
         session,
         request,
@@ -459,6 +461,7 @@ async def _activate_one_stage(
             "approvers": [a for a, _ in approver_tasks],
             "observers": [a for a, _ in observer_tasks],
             "required_approvers": sorted(required_ids),
+            "due_at": due_at.isoformat() if due_at else None,
         },
     )
     return "started"
@@ -571,7 +574,11 @@ async def _stage_is_terminal(
 
 async def _close_stage_open_tasks(
     session: AsyncSession, request_id: str, stage_order: int
-) -> None:
+) -> List[str]:
+    """Skip leftover open/claimed tasks. Returns skipped *approver* assignees.
+
+    Observers are closed too but never listed — they are not notified.
+    """
     rows = await session.execute(
         select(ApprovalTask).where(
             ApprovalTask.request_id == request_id,
@@ -579,10 +586,38 @@ async def _close_stage_open_tasks(
             ApprovalTask.status.in_(("open", "claimed")),
         )
     )
+    skipped: List[str] = []
     for t in rows.scalars():
+        if t.kind == "approver":
+            skipped.append(t.assignee)
         t.status = "skipped"
         t.completed_at = utcnow()
     await session.flush()
+    return skipped
+
+
+async def _emit_quorum_skipped(
+    session: AsyncSession,
+    request: ApprovalRequest,
+    stage: ApprovalStage,
+    skipped_assignees: List[str],
+) -> None:
+    """Notify approvers whose tasks were closed once quorum was already met.
+
+    Not a webhook event — callers already get `stage_completed`.
+    """
+    if not skipped_assignees:
+        return
+    await emit_event(
+        session,
+        request,
+        "stage_quorum_skipped",
+        {
+            "stage_order": stage.stage_order,
+            "name": stage.name,
+            "skipped_assignees": skipped_assignees,
+        },
+    )
 
 
 async def _close_group_tasks_skipped(
@@ -838,6 +873,11 @@ async def emit_event(
         )
         await session.flush()
 
+    # Staff notifications (best-effort; collect() never raises and does no
+    # HTTP). Intents ride on the session and are only sent by flush() after
+    # the transaction commits — a rolled-back event never notifies.
+    await notification_svc.collect(session, event_type, event_payload, request)
+
     return event
 
 
@@ -886,6 +926,9 @@ async def escalate_stage(
     }
     task_search = build_task_search_text(request)
     created = 0
+    # Only the pairs that actually produced a task — users who already had an
+    # open task on the stage are skipped and must not be re-notified.
+    created_pairs: List[tuple[str, Optional[str]]] = []
     for assignee, delegated_from in assignee_pairs:
         if assignee in existing:
             continue
@@ -902,6 +945,7 @@ async def escalate_stage(
                 search_text=task_search,
             )
         )
+        created_pairs.append((assignee, delegated_from))
         created += 1
     await session.flush()
     if created:
@@ -911,8 +955,9 @@ async def escalate_stage(
             "stage_escalated",
             {
                 "stage_order": stage.stage_order,
-                "added_approvers": [a for a, _ in assignee_pairs],
+                "added_approvers": [a for a, _ in created_pairs],
                 "actor": actor,
+                "due_at": due_at.isoformat() if due_at else None,
             },
         )
     return created
@@ -972,7 +1017,8 @@ async def synthesize_decision(
         return
 
     if outcome == "approved":
-        await _close_stage_open_tasks(session, request.id, stage.stage_order)
+        skipped = await _close_stage_open_tasks(session, request.id, stage.stage_order)
+        await _emit_quorum_skipped(session, request, stage, skipped)
         await emit_event(
             session,
             request,

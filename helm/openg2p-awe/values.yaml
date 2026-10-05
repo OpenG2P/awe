@@ -27,6 +27,21 @@ global:
   aweAdminResolverSecretName: 'awe-admin-resolver'
   aweAdminResolverSecretKey: 'client_secret'
 
+  # Notification connector (openg2p-notification; Novu send-only from AWE).
+  # Novu is the commons subchart from openg2p-helm; under release commons the
+  # API service is commons-novu-api and secret commons-novu key api-key is
+  # written by the chart bootstrap Job. Mirrors registry's globals.
+  notificationEnabled: true
+  notificationProvider: novu
+  notificationProviderUrl: 'http://commons-novu-api:3000'
+  notificationApiKeySecret: 'commons-novu'
+  notificationApiKeySecretKey: 'api-key'
+  # AWE event key -> Novu trigger id (Novu ids can't contain dots). A key not
+  # listed here is never sent. Templates live in the root novu-setup.py.
+  notificationWorkflows: '{"approval.stage_started":"approval-stage-started","approval.task_reassigned":"approval-task-reassigned","approval.stage_escalated":"approval-stage-escalated","approval.task_expired":"approval-task-expired","approval.request_approved":"approval-request-approved","approval.request_rejected":"approval-request-rejected","approval.request_cancelled":"approval-request-cancelled","approval.stage_quorum_skipped":"approval-stage-quorum-skipped"}'
+  # Staff-ui origin for in-app and email links. Locale is hardcoded as /en in the Novu workflow.
+  staffPortalBaseUrl: ''
+
 postgres-init:
   enabled: true
   postgresql:
@@ -289,13 +304,6 @@ awe:
       # See the "Integration with Registry" doc for details.
       audience: ''
 
-    notifier:
-      enabled: false
-      smtpHost: ''
-      smtpPort: 587
-      fromAddress: no-reply@openg2p.org
-      useTls: true
-
   # ---------------------------------------------------------------------------
   # Environment variables
   # ---------------------------------------------------------------------------
@@ -309,6 +317,13 @@ awe:
     # (JWKS fetch, admin token, admin REST API). Use for self-signed certs.
     # Never disable in production.
     AWE__KEYCLOAK__VERIFY_SSL: true
+    # Notification connector (openg2p-notification, Novu). No AWE__ prefix —
+    # the connector reads NOTIFICATION_* env vars directly.
+    NOTIFICATION_ENABLED: '{{ .Values.global.notificationEnabled }}'
+    NOTIFICATION_PROVIDER: '{{ .Values.global.notificationProvider }}'
+    NOTIFICATION_PROVIDER_URL: '{{ tpl .Values.global.notificationProviderUrl $ }}'
+    NOTIFICATION_WORKFLOWS: '{{ .Values.global.notificationWorkflows }}'
+    NOTIFICATION_STAFF_PORTAL_BASE_URL: '{{ tpl (.Values.global.staffPortalBaseUrl | default "") $ }}'
 
   envVarsFrom:
     DB_PASSWORD:
@@ -320,6 +335,12 @@ awe:
       secretKeyRef:
         name: '{{ tpl .Values.global.aweAdminResolverSecretName $ }}'
         key: '{{ .Values.global.aweAdminResolverSecretKey }}'
+    # Novu secret key — written by the commons Novu chart bootstrap Job.
+    NOTIFICATION_PROVIDER_API_KEY:
+      secretKeyRef:
+        name: '{{ tpl .Values.global.notificationApiKeySecret $ }}'
+        key: '{{ .Values.global.notificationApiKeySecretKey }}'
+        optional: true
 
   startupProbe:
     enabled: true

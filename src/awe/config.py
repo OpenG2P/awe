@@ -78,16 +78,6 @@ class KeycloakConfig(BaseModel):
     verify_ssl: bool = True
 
 
-class NotifierConfig(BaseModel):
-    enabled: bool = False
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    from_address: str = "no-reply@openg2p.org"
-    use_tls: bool = True
-
-
 class AweConfig(BaseModel):
     # Service metadata
     service_id: str = "openg2p.awe"
@@ -100,7 +90,6 @@ class AweConfig(BaseModel):
     resolver: ResolverConfig = ResolverConfig()
     sla: SlaConfig = SlaConfig()
     keycloak: KeycloakConfig = KeycloakConfig()
-    notifier: NotifierConfig = NotifierConfig()
 
 
 class Settings(BaseSettings):
