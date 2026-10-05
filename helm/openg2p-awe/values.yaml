@@ -151,6 +151,11 @@ keycloak-init:
 # ---------------------------------------------------------------------------
 iamRegister:
   enabled: true
+  # true: run as a Helm post-install/post-upgrade hook (standalone installs).
+  # false: run as a regular resource -- set this in umbrella charts (e.g.
+  # commons-services), where one failing hook stops every later hook and
+  # Rancher may skip hooks. The Job name carries the release revision either way.
+  runAsHook: true
   applicationDescription: "Approval Workflow Engine"
   image:
     repository: curlimages/curl
