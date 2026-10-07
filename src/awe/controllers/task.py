@@ -14,7 +14,7 @@ import math
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import String, cast, func, or_, select
+from sqlalchemy import String, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -117,8 +117,8 @@ async def list_tasks(
         description=(
             "Filter by assignee. Default `me` resolves to `preferred_username`, "
             "then `username`, then `sub`. "
-            "Pass `*` (or any non-`me` value) plus `request_id` to enumerate "
-            "all tasks for a given request — used by the admin Request Detail page."
+            "`*` returns every completed task, plus open tasks assigned to the "
+            "caller. Pass `status` to list every task in that status."
         ),
     ),
     request_id: Optional[str] = Query(default=None),
@@ -142,6 +142,20 @@ async def list_tasks(
         if isinstance(me, JSONResponse):
             return me
         task_filters.append(ApprovalTask.assignee == me)
+    elif assignee == "*":
+        # Registry list_tasks_for_request: every completed task, and open
+        # tasks only when they belong to the caller. An explicit status
+        # (list_all_open_tasks) keeps the unscoped status filter below.
+        if not status_filter:
+            me = _require_assignee_id(identity)
+            if isinstance(me, JSONResponse):
+                return me
+            task_filters.append(
+                or_(
+                    ApprovalTask.status == "completed",
+                    and_(ApprovalTask.status == "open", ApprovalTask.assignee == me),
+                )
+            )
     elif assignee and assignee != "*":
         task_filters.append(ApprovalTask.assignee == assignee)
     if request_id:
@@ -150,13 +164,14 @@ async def list_tasks(
         task_filters.append(ApprovalTask.status == status_filter)
 
     request_filters = []
-    needs_request_join = bool(artifact_type or policy_key or search_text)
+    search_needle = (search_text or "").strip()
+    needs_request_join = bool(artifact_type or policy_key or search_needle)
     if artifact_type:
         request_filters.append(ApprovalRequest.artifact_type == artifact_type)
     if policy_key:
         request_filters.append(ApprovalRequest.policy_key == policy_key)
-    if search_text:
-        pattern = f"%{search_text.strip()}%"
+    if search_needle:
+        pattern = f"%{search_needle}%"
         request_filters.append(
             or_(
                 ApprovalTask.search_text.ilike(pattern),

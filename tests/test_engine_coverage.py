@@ -814,7 +814,7 @@ async def test_sla_on_breach_escalate_adds_approvers(
     await _run_sla_tick()
 
     resp = await client.get(
-        f"/v1/awe/tasks?assignee=*&request_id={request_id}",
+        f"/v1/awe/tasks?assignee=*&request_id={request_id}&status=open",
         headers=auth_header(service_token),
     )
     assignees = {t["assignee"] for t in resp.json()["items"]}
