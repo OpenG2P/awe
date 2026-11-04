@@ -95,7 +95,7 @@ async def test_parallel_stages_need_both_before_advancing(
 
     # Both legal and finance should have tasks immediately.
     resp = await client.get(
-        "/v1/awe/tasks?assignee=*&request_id=" + request_id,
+        "/v1/awe/tasks?assignee=*&request_id=" + request_id + "&status=open",
         headers=auth_header(service_token),
     )
     tasks = resp.json()["items"]
@@ -110,7 +110,7 @@ async def test_parallel_stages_need_both_before_advancing(
         headers=auth_header(_user_token("u-legal")),
     )
     resp2 = await client.get(
-        "/v1/awe/tasks?assignee=*&request_id=" + request_id,
+        "/v1/awe/tasks?assignee=*&request_id=" + request_id + "&status=open",
         headers=auth_header(service_token),
     )
     # Director not yet assigned.
@@ -124,7 +124,7 @@ async def test_parallel_stages_need_both_before_advancing(
         headers=auth_header(_user_token("u-fin")),
     )
     resp3 = await client.get(
-        "/v1/awe/tasks?assignee=*&request_id=" + request_id,
+        "/v1/awe/tasks?assignee=*&request_id=" + request_id + "&status=open",
         headers=auth_header(service_token),
     )
     assert "u-dir" in {t["assignee"] for t in resp3.json()["items"]}
@@ -224,7 +224,7 @@ async def test_repeat_approver_filtered_from_later_stage(
     )
     # Stage 2 should not give alice a task — only bob.
     resp = await client.get(
-        "/v1/awe/tasks?assignee=*&request_id=" + request_id,
+        "/v1/awe/tasks?assignee=*&request_id=" + request_id + "&status=open",
         headers=auth_header(service_token),
     )
     stage2 = [t for t in resp.json()["items"] if t["stage_order"] == 2]

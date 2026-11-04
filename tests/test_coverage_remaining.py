@@ -396,7 +396,7 @@ async def test_engine_parallel_group_and_repeat_approver_filter(
     request_id = body["request_id"]
 
     tasks_resp = await client.get(
-        f"/v1/awe/tasks?assignee=*&request_id={request_id}",
+        f"/v1/awe/tasks?assignee=*&request_id={request_id}&status=open",
         headers=auth_header(service_token),
     )
     assignees = {t["assignee"] for t in tasks_resp.json()["items"]}
@@ -406,7 +406,7 @@ async def test_engine_parallel_group_and_repeat_approver_filter(
         t["assignee"]: t["id"]
         for t in (
             await client.get(
-                f"/v1/awe/tasks?assignee=*&request_id={request_id}",
+                f"/v1/awe/tasks?assignee=*&request_id={request_id}&status=open",
                 headers=auth_header(service_token),
             )
         ).json()["items"]
