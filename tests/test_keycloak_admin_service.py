@@ -42,6 +42,28 @@ def test_format_user_skips_invalid():
     assert kc._format_user({"username": "a", "firstName": "A", "lastName": "B"})["name"] == "A B"
 
 
+@pytest.mark.asyncio
+async def test_get_user_by_username_exact_match_and_miss():
+    found = [{"username": "alice", "email": "a@x.org", "firstName": "A", "lastName": "B"}]
+    with patch(
+        "awe.services.keycloak_admin._admin_get", new=AsyncMock(return_value=found)
+    ) as get:
+        user = await kc.get_user_by_username("alice")
+    get.assert_awaited_once_with("/users", {"username": "alice", "exact": "true"})
+    assert user["email"] == "a@x.org"
+    assert user["name"] == "A B"
+    assert user["user_id"] == "alice"
+
+    with patch(
+        "awe.services.keycloak_admin._admin_get", new=AsyncMock(return_value=[{}])
+    ):
+        assert await kc.get_user_by_username("ghost") is None
+    with patch(
+        "awe.services.keycloak_admin._admin_get", new=AsyncMock(return_value=[])
+    ):
+        assert await kc.get_user_by_username("nobody") is None
+
+
 def test_admin_base_url():
     with patch("awe.services.keycloak_admin.get_settings") as gs:
         gs.return_value.awe.keycloak.base_url = "https://kc/"

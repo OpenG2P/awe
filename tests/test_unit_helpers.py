@@ -25,6 +25,8 @@ from awe.schemas.policy import ApproverRuleIn, StageIn
 from awe.schemas.request import DecisionIn
 from awe.schemas.responses import ResponseForbiddenAdmin, auth_protected
 from awe.services.assignee_id import (
+    assignee_display_name_from_claims,
+    assignee_display_name_from_keycloak_user,
     assignee_id_from_claims,
     assignee_id_from_keycloak_user,
     first_assignee_id,
@@ -48,6 +50,21 @@ def test_assignee_id_from_keycloak_user_maps_id_to_sub():
 
 def test_assignee_id_from_claims():
     assert assignee_id_from_claims({"preferred_username": "alice"}) == "alice"
+
+
+def test_assignee_display_name_from_keycloak_user():
+    assert assignee_display_name_from_keycloak_user({"name": "  Ada  "}) == "Ada"
+    assert assignee_display_name_from_keycloak_user({"displayName": "Bea"}) == "Bea"
+    assert (
+        assignee_display_name_from_keycloak_user({"firstName": "C", "lastName": "D"})
+        == "C D"
+    )
+    assert assignee_display_name_from_keycloak_user({"username": "eve"}) == "eve"
+
+
+def test_assignee_display_name_from_claims():
+    assert assignee_display_name_from_claims({"name": "  Ada  "}) == "Ada"
+    assert assignee_display_name_from_claims({"preferred_username": "eve"}) == "eve"
 
 
 def test_stringify_variants():
