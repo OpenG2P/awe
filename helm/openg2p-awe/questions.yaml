@@ -57,24 +57,41 @@ questions:
   label: SLA Check Interval (s)
   group: SLA
 
-# Notifier
-- variable: awe.appConfig.notifier.enabled
-  description: Send approver notification emails over SMTP
+# Notifications
+- variable: global.notificationEnabled
+  description: Master switch for AWE staff notifications. Off skips every send, even when a workflow is listed below.
   type: boolean
-  label: Enable Email Notifications
-  group: Notifier
+  default: true
+  label: Enable Notifications
+  group: Notifications
 
-- variable: awe.appConfig.notifier.smtpHost
-  description: SMTP server hostname
+- variable: global.notificationProvider
+  description: Notification provider used by the AWE API. Novu is the only supported value.
   type: string
-  label: SMTP Host
-  group: Notifier
+  default: novu
+  label: Notification Provider
+  group: Notifications
 
-- variable: awe.appConfig.notifier.fromAddress
-  description: From address used when sending notifications
+- variable: global.notificationProviderUrl
+  description: Base URL of the Novu API. In-cluster this is the commons Novu API service.
   type: string
-  label: From Address
-  group: Notifier
+  default: http://commons-novu-api:3000
+  label: Notification Provider URL
+  group: Notifications
+
+- variable: global.notificationWorkflows
+  description: JSON map of AWE event key to Novu workflow id. An event is sent only when its key is listed here. Remove a key to turn that notification off. Novu workflow ids cannot contain dots.
+  type: string
+  default: '{"approval.stage_started":"approval-stage-started","approval.task_reassigned":"approval-task-reassigned","approval.stage_escalated":"approval-stage-escalated","approval.task_expired":"approval-task-expired","approval.request_approved":"approval-request-approved","approval.request_rejected":"approval-request-rejected","approval.request_cancelled":"approval-request-cancelled","approval.stage_quorum_skipped":"approval-stage-quorum-skipped"}'
+  label: Notification Workflows
+  group: Notifications
+
+- variable: global.staffPortalBaseUrl
+  description: Public staff-ui origin used in AWE notification links (for example https://farmer-registry.dev.openg2p.org). Locale is hardcoded as /en in the Novu workflow. Do not use the AWE admin hostname.
+  type: string
+  default: ""
+  label: Staff Portal Base URL
+  group: Notifications
 
 # Image
 - variable: awe.image.repository

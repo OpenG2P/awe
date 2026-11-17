@@ -14,11 +14,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from awe.config import _find_config_path, get_settings
-from awe.models import ApprovalPolicy, ApprovalRequest, ApprovalStage, ApprovalTask, UserDelegation
+from awe.models import ApprovalPolicy, ApprovalRequest, ApprovalStage, ApprovalTask, ApproverRule, UserDelegation
 from awe.services import audit as audit_svc
 from awe.services import engine as engine_svc
 from awe.services import keycloak_admin as kc
-from awe.services import notifier as notifier_svc
 from awe.services import policy as policy_svc
 from awe.services import resolver as resolver_svc
 from awe.services.auth import CallerIdentity, _verify_token
@@ -86,7 +85,7 @@ def test_find_config_path_src_fallback(monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# services/audit.py, auth.py, notifier.py, keycloak_admin.py, resolver.py
+# services/audit.py, auth.py, keycloak_admin.py, resolver.py
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_audit_record_returns_row(client) -> None:
@@ -96,6 +95,7 @@ async def test_audit_record_returns_row(client) -> None:
     identity = CallerIdentity(
         subject="audit-user",
         assignee_id="audit-user",
+        name=None,
         roles=["AWE_ADMIN"],
         is_service_account=False,
         raw_claims={"email": "audit@test"},
@@ -130,29 +130,6 @@ async def test_verify_token_jwt_error():
                 await _verify_token("tok")
             assert exc.value.status_code == 401
             assert "Invalid bearer token" in exc.value.detail
-
-
-def test_notifier_plain_smtp_with_login():
-    cfg = MagicMock()
-    cfg.enabled = True
-    cfg.use_tls = False
-    cfg.smtp_host = "smtp.test"
-    cfg.smtp_port = 25
-    cfg.smtp_user = "user"
-    cfg.smtp_password = "pass"
-    cfg.from_address = "noreply@test"
-
-    smtp = MagicMock()
-    smtp.__enter__ = MagicMock(return_value=smtp)
-    smtp.__exit__ = MagicMock(return_value=False)
-
-    with patch("awe.services.notifier.get_settings") as gs, patch(
-        "awe.services.notifier.smtplib.SMTP", return_value=smtp
-    ):
-        gs.return_value.awe.notifier = cfg
-        notifier_svc._send_email("to@test", "subj", "body")
-        smtp.login.assert_called_once_with("user", "pass")
-        smtp.send_message.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -843,6 +820,7 @@ def _admin_identity() -> CallerIdentity:
     return CallerIdentity(
         subject="test-admin",
         assignee_id="test-admin",
+        name=None,
         roles=["AWE_ADMIN", "AWE_VIEWER"],
         is_service_account=False,
         raw_claims={"email": "admin@test"},
@@ -1071,6 +1049,7 @@ async def test_controllers_direct_request_and_task(client, admin_token, service_
     identity = CallerIdentity(
         subject="svc-registry",
         assignee_id=None,
+        name=None,
         roles=[],
         is_service_account=True,
         raw_claims={},
@@ -1078,6 +1057,7 @@ async def test_controllers_direct_request_and_task(client, admin_token, service_
     user = CallerIdentity(
         subject="u-alice",
         assignee_id="u-alice",
+        name=None,
         roles=[],
         is_service_account=False,
         raw_claims={"email": "alice@test"},
@@ -1446,6 +1426,7 @@ async def test_controllers_error_paths(client, admin_token) -> None:
     svc = CallerIdentity(
         subject="svc-registry",
         assignee_id=None,
+        name=None,
         roles=[],
         is_service_account=True,
         raw_claims={},
@@ -1453,6 +1434,7 @@ async def test_controllers_error_paths(client, admin_token) -> None:
     user = CallerIdentity(
         subject="u-alice",
         assignee_id="u-alice",
+        name=None,
         roles=[],
         is_service_account=False,
         raw_claims={"email": "alice@test"},
@@ -1624,6 +1606,7 @@ async def test_controllers_error_paths(client, admin_token) -> None:
         bad_assignee = CallerIdentity(
             subject="no-assignee",
             assignee_id=None,
+            name=None,
             roles=[],
             is_service_account=False,
             raw_claims={"email": "x@test"},
@@ -2029,4 +2012,292 @@ async def test_sla_monitor_missing_stage_continue(client, admin_token, service_t
 
     await _tick(sm)
 
+
+@pytest.mark.asyncio
+async def test_task_decide_forbidden_conflict_and_orphan_request(client) -> None:
+    from awe.controllers import task as task_ctrl
+    from awe.db import get_engine
+    from awe.schemas.request import DecisionIn, ReassignTaskIn
+    from fastapi.responses import JSONResponse
+
+    sm = async_sessionmaker(get_engine(), expire_on_commit=False)
+    async with sm() as session:
+        policy = ApprovalPolicy(
+            policy_key="cov.task.err",
+            version=1,
+            name="Task err",
+            artifact_type="test",
+            status="active",
+        )
+        session.add(policy)
+        await session.flush()
+        stage = ApprovalStage(
+            policy_id=policy.id, name="S1", stage_order=1, mode="all"
+        )
+        session.add(stage)
+        await session.flush()
+        request = ApprovalRequest(
+            policy_id=policy.id,
+            policy_key=policy.policy_key,
+            policy_version=1,
+            artifact_type="test",
+            artifact_id="task-err",
+            source_service="svc",
+            requester="r",
+            context={},
+            status="in_review",
+        )
+        session.add(request)
+        await session.flush()
+        task = ApprovalTask(
+            request_id=request.id,
+            stage_id=stage.id,
+            stage_order=1,
+            assignee="u-alice",
+            status="open",
+        )
+        session.add(task)
+        await session.flush()
+
+        other = CallerIdentity(
+            subject="u-bob",
+            assignee_id="u-bob",
+            name="Bob",
+            roles=[],
+            is_service_account=False,
+            raw_claims={},
+        )
+        forbidden = await task_ctrl.decide(
+            task.id, DecisionIn(action="approve"), identity=other, session=session
+        )
+        assert isinstance(forbidden, JSONResponse) and forbidden.status_code == 403
+
+        alice = CallerIdentity(
+            subject="u-alice",
+            assignee_id="u-alice",
+            name="Alice",
+            roles=[],
+            is_service_account=False,
+            raw_claims={"name": "Alice"},
+        )
+        with patch(
+            "awe.controllers.task.engine_svc.apply_decision",
+            new=AsyncMock(side_effect=engine_svc.EngineError("busy")),
+        ):
+            conflict = await task_ctrl.decide(
+                task.id, DecisionIn(action="approve"), identity=alice, session=session
+            )
+        assert isinstance(conflict, JSONResponse) and conflict.status_code == 409
+
+        admin = _admin_identity()
+        real_get = session.get
+
+        async def get_task_then_missing_request(model, ident):
+            if model is ApprovalRequest:
+                return None
+            return await real_get(model, ident)
+
+        with patch.object(session, "get", side_effect=get_task_then_missing_request):
+            orphan = await task_ctrl.reassign(
+                task.id,
+                ReassignTaskIn(new_assignee="u-cara"),
+                identity=admin,
+                session=session,
+            )
+        assert isinstance(orphan, JSONResponse) and orphan.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_engine_uncovered_recompute_and_required_assignee_paths(client) -> None:
+    from awe.db import get_engine
+    from sqlalchemy.orm import selectinload
+
+    sm = async_sessionmaker(get_engine(), expire_on_commit=False)
+    async with sm() as session:
+        policy = ApprovalPolicy(
+            policy_key="eng.uncovered",
+            version=1,
+            name="Uncovered",
+            artifact_type="test",
+            status="active",
+        )
+        session.add(policy)
+        await session.flush()
+        stage = ApprovalStage(
+            policy_id=policy.id,
+            name="Any",
+            stage_order=1,
+            mode="any-n",
+            mode_value=2,
+            parallel_group=1,
+        )
+        sibling = ApprovalStage(
+            policy_id=policy.id,
+            name="Sib",
+            stage_order=2,
+            mode="all",
+            parallel_group=1,
+        )
+        session.add_all([stage, sibling])
+        await session.flush()
+        request = ApprovalRequest(
+            policy_id=policy.id,
+            policy_key=policy.policy_key,
+            policy_version=1,
+            artifact_type="test",
+            artifact_id="uncovered",
+            source_service="svc",
+            requester="r",
+            context={},
+            status="in_review",
+            current_stage_order=1,
+        )
+        session.add(request)
+        await session.flush()
+        t1 = ApprovalTask(
+            request_id=request.id,
+            stage_id=stage.id,
+            stage_order=1,
+            assignee="u-a",
+            status="expired",
+            delegated_from="u-orig",
+        )
+        t2 = ApprovalTask(
+            request_id=request.id,
+            stage_id=stage.id,
+            stage_order=1,
+            assignee="u-b",
+            status="expired",
+            reassigned_from="u-orig2",
+        )
+        sib_task = ApprovalTask(
+            request_id=request.id,
+            stage_id=sibling.id,
+            stage_order=2,
+            assignee="u-c",
+            status="open",
+        )
+        session.add_all([t1, t2, sib_task])
+        await session.flush()
+
+        t1.status = "completed"
+        with pytest.raises(engine_svc.EngineError, match="Task is not open"):
+            await engine_svc.apply_decision(session, request, t1, actor="u-a", action="approve")
+
+        stage = (
+            await session.execute(
+                select(ApprovalStage)
+                .options(selectinload(ApprovalStage.rules))
+                .where(ApprovalStage.id == stage.id)
+            )
+        ).scalar_one()
+        assert await engine_svc._recompute_stage(session, stage, request.id) == "rejected"
+
+        unknown = ApprovalStage(
+            policy_id=policy.id, name="X", stage_order=9, mode="unknown-mode"
+        )
+        unknown_task = ApprovalTask(
+            request_id=request.id,
+            stage_id=stage.id,
+            stage_order=9,
+            assignee="u-z",
+            status="open",
+        )
+        session.add(unknown_task)
+        await session.flush()
+        assert await engine_svc._recompute_stage(session, unknown, request.id) == "open"
+
+        orig = ApproverRule(
+            stage_id=stage.id,
+            rule_type="user",
+            rule_value={"user_id": "u-orig"},
+            kind="approver",
+            required=True,
+        )
+        orig2 = ApproverRule(
+            stage_id=stage.id,
+            rule_type="user",
+            rule_value={"user_id": "u-orig2"},
+            kind="approver",
+            required=True,
+        )
+        session.add_all([orig, orig2])
+        await session.flush()
+        stage.rules = [orig, orig2]
+        effective = await engine_svc._required_assignees_for_stage(
+            session, stage, request.id
+        )
+        assert "u-a" in effective
+        assert "u-b" in effective
+
+        syn_policy = ApprovalPolicy(
+            policy_key="eng.syn.par",
+            version=1,
+            name="Syn par",
+            artifact_type="test",
+            status="active",
+        )
+        session.add(syn_policy)
+        await session.flush()
+        syn_a = ApprovalStage(
+            policy_id=syn_policy.id,
+            name="A",
+            stage_order=1,
+            mode="any-n",
+            mode_value=1,
+            parallel_group=7,
+        )
+        syn_b = ApprovalStage(
+            policy_id=syn_policy.id,
+            name="B",
+            stage_order=2,
+            mode="all",
+            parallel_group=7,
+        )
+        session.add_all([syn_a, syn_b])
+        await session.flush()
+        syn_req = ApprovalRequest(
+            policy_id=syn_policy.id,
+            policy_key=syn_policy.policy_key,
+            policy_version=1,
+            artifact_type="test",
+            artifact_id="syn-par",
+            source_service="svc",
+            requester="r",
+            context={},
+            status="in_review",
+            current_stage_order=1,
+        )
+        session.add(syn_req)
+        await session.flush()
+        session.add(
+            ApprovalTask(
+                request_id=syn_req.id,
+                stage_id=syn_a.id,
+                stage_order=1,
+                assignee="u-syn",
+                status="open",
+            )
+        )
+        session.add(
+            ApprovalTask(
+                request_id=syn_req.id,
+                stage_id=syn_b.id,
+                stage_order=2,
+                assignee="u-sib",
+                status="open",
+            )
+        )
+        await session.flush()
+        syn_a = (
+            await session.execute(
+                select(ApprovalStage)
+                .options(selectinload(ApprovalStage.rules))
+                .where(ApprovalStage.id == syn_a.id)
+            )
+        ).scalar_one()
+        await engine_svc.synthesize_decision(
+            session, syn_req, syn_a, action="approve", actor="sla-monitor", reason="tick"
+        )
+        assert syn_req.status == "in_review"
 

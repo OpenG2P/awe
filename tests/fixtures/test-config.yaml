@@ -20,6 +20,3 @@ awe:
     base_url: ""
     realm: openg2p
     issuer: ""
-
-  notifier:
-    enabled: false
