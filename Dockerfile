@@ -27,7 +27,7 @@ FROM python:3.13-slim AS builder
 # the runtime stage from the local wheelhouse. Mirrors registry-platform's
 # NOTIFICATION_REPO/NOTIFICATION_REF pattern.
 ARG NOTIFICATION_REPO=openg2p/notifications
-ARG NOTIFICATION_REF=develop
+ARG NOTIFICATION_REF=1.0.0
 
 WORKDIR /build
 
